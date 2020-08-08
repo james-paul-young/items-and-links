@@ -1,0 +1,15 @@
+var connectorResources = {
+    pageTitleString: "Connectors",
+    identifierColumnHeaderString: "Identifier",
+    descriptionColumnHeaderString: "Description",
+    styleColumnHeaderString: "Style",
+    actionsColumnHeaderString: "Actions",
+    deleteButtonString: "Delete",
+    viewButtonString: "View",
+    createLabelString: "Add new",
+    identifierHelpString: "The identifier displayed for this item.",
+    colourHelpString: "The colour used when displaying this Connector.",
+    descriptionHelpString: "A detailed description for this Connector.",
+    modalTitleString: "Properties", 
+    visibleColumnHeaderString: "Visible", 
+}

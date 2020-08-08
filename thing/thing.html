@@ -1,0 +1,63 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootswatch/4.3.1/sandstone/bootstrap.min.css">
+  <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+  <script src='http://d3js.org/d3.v5.min.js'></script>
+
+</head>
+
+<body>
+  <div class="main">
+    <div class="table-title">
+      <h2><span id="pageTitle"></span></h2>
+    </div>
+    <div class="form-group ">
+      <div class="btn-group" role="group" aria-label="Manage items">
+        <button type="button" class="btn btn-secondary" id="createThingButton" data-toggle="modal"
+          data-target="#thingModal">Add
+          New</button>
+      </div>
+    </div>
+  </div>
+  <div class="form-group">
+    <table id="thingsTable" class="table table-hover"></table>
+  </div>
+  <script src="../js/common.js"></script>
+  <script src="../js/viewmodel.js"></script>
+
+  <script src="../js/application_resources.js"></script>
+  <script src="../js/application_view.js"></script>
+
+  <script src="../project/project_model.js"></script>
+  <script src="../project/project_resources.js"></script>
+  <script src="../project/project_viewmodel.js"></script>
+
+  <script src="../connector/connector_resources.js"></script>
+  <script src="../connector/connector_model.js"></script>
+  <script src="../connector/connector_viewmodel.js"></script>
+
+  <script src="../type/type_resources.js"></script>
+  <script src="../type/type_model.js"></script>
+  <script src="../type/type_viewmodel.js"></script>
+  <script src="../type/type_view.js"></script>
+
+  <script src="../connection/connection_resources.js"></script>
+  <script src="../connection/connection_model.js"></script>
+  <script src="../connection/connection_viewmodel.js"></script>
+
+  <script src="thing_resources.js"></script>
+  <script src="thing_model.js"></script>
+  <script src="thing_viewmodel.js"></script>
+  <script src="thing_properties.js"></script>
+  <script src="thing_view.js"></script>
+
+
+</body>
+
+</html>

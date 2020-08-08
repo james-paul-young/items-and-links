@@ -1,0 +1,216 @@
+:root {
+	/*  --chartNode-stroke-width: 3px; */
+	  --chartNode-radius: 20px;
+	  font-family: sans-serif;
+	  font-size: 16px;
+	  fill: black;
+	 
+	}
+	 
+	@media print {
+	  @page { size: landscape; }
+	}
+	.chartOptions {
+	  bottom: 0;
+	  right: 0;
+	  position: fixed;
+	  padding: 10px;
+	}
+	.legend {
+	  font-size: 12px;
+	}
+	.legendContainer {
+	  fill: none;
+	  stroke-width: 2px;
+	  border: solid 1px black;
+	  /* width: 100px;
+	  height: 100px; */
+	}
+	.chartPath {
+	  fill: none;
+	  stroke-width: 2px;
+	  cursor: pointer;
+	}
+	.keyTitle {
+	  font-size: 25px;
+	  font-weight: bold;
+	  fill: black;
+	}
+	.chartNode {
+	/*  stroke-width: var(--chartNode-stroke-width);*/
+	  /* fill: white; */
+	  box-shadow: 10px 10px 5px #666
+	}
+	.chartNode:hover {
+	  cursor: pointer;
+	}
+	 
+	.chartText {
+	  /* font-family: sans-serif;
+	  font-size: 14px;
+	  fill: black; */
+	  height: 10px;
+	  width: 10px;
+	text-shadow: 0 1px 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, -1px 0 0 #fff;
+	}
+	.pathText {
+	  font-family: sans-serif;
+	  font-size: 10px;
+	  fill: black;
+	  height: 50px;
+	  width: 50px;
+	  text-shadow: 0 1px 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, -1px 0 0 #fff;
+	  text-anchor: middle;
+	}
+	.icon:hover {
+	  cursor: pointer;
+	}
+	.chartTooltipInvisible {
+	  opacity: 1e-6;
+	}
+	.chartTooltipVisible {
+	  opacity: 1;
+	}
+	.chartTooltip {
+	  position: absolute;
+	  padding: 8px;
+	  background: whitesmoke;
+	  border: solid 1px #aaa;
+	  border-radius: 8px;
+	  pointer-events: none;
+	  visibility: hidden;
+	}
+	.links {
+	  stroke: steelblue;
+	  stroke-width: 1px;
+	}
+	.link {
+	  fill: none;
+	  /* stroke: #666; */
+	  stroke-width: 1px;
+	}
+	 
+	.contextMenuItem:hover {
+	  cursor: pointer;
+	  background-color: #aaa;
+	}
+	.contextMenu {
+	  padding-left: 0;
+	  overflow:hidden; 
+	  display: none;
+	  list-style: none;
+	  height: 100px;
+	}
+	.ripple {
+	  fill: none;
+	  stroke: black;
+	}
+   .menu {
+	  box-shadow: 0 4px 5px 3px rgba(0, 0, 0, 0.2);
+	  position: absolute;
+	  display: none;
+	  z-index: 10;
+	  background-color: #fefefe;
+	}
+	 
+	.menu-options {
+	  list-style: none;
+	  padding: 0;
+	  margin-bottom: 0;
+	}
+	.menu-option {
+	  /* font-weight: 500;
+	  font-size: 14px; */
+	  padding: 10px 40px 10px 20px;
+	  cursor: pointer;
+	}
+	.descriptorTitle {
+	  font-weight: bold;
+	}
+	.descriptorText {
+	  font-weight: normal;
+	}
+	.footerBar {
+	  background-color: black;
+	  width: 100%;
+	  height: 1.5em;
+	}
+	.menu-option:hover {
+	  background: rgba(0, 0, 0, 0.2);
+	}
+	.descriptorArea {
+	  cursor: grab;
+	}
+	  .xheader {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		height: 55px;
+		/* background-color: #abcdef; */
+	}
+	.xfooter {
+		position: fixed;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		height: 2.5em;
+		background-color: #fff;
+	}
+	.xcontent {
+		position: fixed;
+		top: 55px;
+		bottom: 180px;
+		left: 0;
+		right: 0;
+		/* background-color: #F63; */
+		overflow: auto;
+	}
+  .visual {
+	width:100%;
+	height:100%;
+  }
+  .descriptorArea {
+	fill: black;
+  }
+  .legendItem {
+	fill: none;
+	stroke-width: 2px;
+  }
+  .labelName {
+	font-size: 15px;
+	stroke: transparent;
+	fill: black;
+	/* font-style: italic; */
+  }
+  .nodeMenuItem {
+	stroke: black;
+	/* font-style: italic; */
+  }
+  .link {
+	stroke: rgb(231, 209, 209);
+	stroke-width: 2px;
+  }
+  .node circle {
+	stroke-width: 1.5px;
+  }
+  .text {
+	text-anchor: middle;
+	text-shadow: 0 1px 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, -1px 0 0 #fff;
+	/* stroke: gainsboro; */
+	/* stroke-width: 0.5px; */
+	/* fill: gainsboro; */
+	text-align: middle;
+  }
+  .linkText {
+	font-family: sans-serif;
+	font-size: 10px;
+	fill: black;
+	height: 50px;
+	width: 50px;
+	text-shadow: 0 1px 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, -1px 0 0 #fff;
+	text-anchor: middle;
+  }
+footer {
+	text-align: right;
+}

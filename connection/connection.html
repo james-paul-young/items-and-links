@@ -1,0 +1,80 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+
+	<link rel="stylesheet" href="../css/styles.css">
+	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootswatch/4.3.1/sandstone/bootstrap.min.css">
+	<script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+	<script src='http://d3js.org/d3.v5.min.js'></script>
+  
+</head>
+
+<body>
+    <div class="main">
+        <div class="table-title">
+            <h2><span id="pageTitle"></span></h2>
+        </div>
+    </div>
+    <div>
+        <ul class="nav nav-tabs">
+            <li class="nav-item">
+                <a class="nav-link active" data-toggle="tab" href="#list">List</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-toggle="tab" href="#matrix">Matrix</a>
+            </li>
+        </ul>
+        <div id="myTabContent" class="tab-content">
+            <div class="tab-pane fade show active" id="list">
+                <p>
+                    <div class="form-group">
+                        <button type="button" class="btn btn-primary" id="createConnectionButton" data-toggle="modal"
+                            data-target="#connectionModal"><i class="fa fa-plus"></i>
+                            Add
+                            New</button>
+                    </div>
+                </p>
+                <table id="connectionsTable" class="table table-hover"></table>
+            </div>
+            <div class="tab-pane fade" id="matrix">
+                <p><div id="connectionsMatrix" class="divTable"></div></p>
+            </div>
+        </div>
+    
+    </div>
+
+    <script src="../js/common.js"></script>
+    <script src="../js/viewmodel.js"></script>
+
+    <script src="../js/application_resources.js"></script>
+    <script src="../js/application_view.js"></script>
+
+    <script src="../project/project_model.js"></script>
+    <script src="../project/project_resources.js"></script>
+    <script src="../project/project_viewmodel.js"></script>
+
+    <script src="../connector/connector_resources.js"></script>
+    <script src="../connector/connector_model.js"></script>
+    <script src="../connector/connector_viewmodel.js"></script>
+    <script src="../connector/connector_view.js"></script>
+
+    <script src="../thing/thing_resources.js"></script>
+    <script src="../thing/thing_model.js"></script>
+    <script src="../thing/thing_viewmodel.js"></script>
+
+    <script src="../type/type_resources.js"></script>
+    <script src="../type/type_model.js"></script>
+    <script src="../type/type_viewmodel.js"></script>
+  
+    <script src="connection_resources.js"></script>
+    <script src="connection_model.js"></script>
+    <script src="connection_viewmodel.js"></script>
+    <script src="connection_properties.js"></script>
+    <script src="connection_view.js"></script>
+</body>
+
+</html>

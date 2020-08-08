@@ -1,0 +1,74 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+
+  <link rel="stylesheet" href="css/styles.css">
+
+  <!-- <link rel="stylesheet" href="css/all.css">
+  <link rel="stylesheet" href="css/bootstrap.min.css">
+  <script src="js/jquery-3.4.1.min.js"></script>
+  <script src="js/bootstrap.min.js"></script>
+  <script src='js/d3.v5.min.js'></script> -->
+
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootswatch/4.3.1/sandstone/bootstrap.min.css">
+  <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+  <script src='http://d3js.org/d3.v5.min.js'></script>
+
+</head>
+
+<body>
+  <div class="main">
+    <div class="table-title">
+      <div class="table-title">
+        <h2><span id="pageTitle"></span></h2>
+    </div>
+</div>
+    <div class="form-group">
+        <button type="button" class="btn btn-secondary" id="createProjectButton" data-toggle="modal"
+          data-target="#projectModal">New Project</button>
+          <button type="button" class="btn btn-secondary" id="importButton">Import</button>
+          <button type="button" class="btn btn-secondary" id="exportButton">Export</button>
+          <button type="button" class="btn btn-secondary" id="importJirasButton">Import from Jira</button>
+    </div>
+  </div>
+  <div class="form-group">
+    <table id="projectsTable" class="table table-hover"></table>
+  </div>
+
+  <script src="js/common.js"></script>
+  <script src="js/viewmodel.js"></script>
+
+  <script src="js/application_resources.js"></script>
+  <script src="js/application_view.js"></script>
+
+  <script src="type/type_resources.js"></script>
+  <script src="type/type_model.js"></script>
+  <script src="type/type_viewmodel.js"></script>
+
+  <script src="connector/connector_resources.js"></script>
+  <script src="connector/connector_model.js"></script>
+  <script src="connector/connector_viewmodel.js"></script>
+
+  <script src="thing/thing_resources.js"></script>
+  <script src="thing/thing_model.js"></script>
+  <script src="thing/thing_viewmodel.js"></script>
+  <script src="thing/thing_properties.js"></script>
+
+  <script src="connection/connection_resources.js"></script>
+  <script src="connection/connection_model.js"></script>
+  <script src="connection/connection_viewmodel.js"></script>
+  <script src="connection/connection_properties.js"></script>
+
+  <script src="project/project_resources.js"></script>
+  <script src="project/project_model.js"></script>
+  <script src="project/project_viewmodel.js"></script>
+  <script src="project/project_properties.js"></script>
+  <script src="project/project_view.js"></script>
+
+</body>
+
+</html>
