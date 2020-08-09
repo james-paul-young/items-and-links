@@ -9,7 +9,7 @@ const setupItemPropertiesModal = () => {
 		<div class="modal-dialog modal-xl" role="document">
 			<div class="modal-content">
 				<div class="modal-header">
-					<h5 class="modal-title" id="exampleModalLabel">Properties</h5>
+					<h3 class="modal-title" id="exampleModalLabel">Properties</h3>
 					<button type="button" class="close" data-dismiss="modal" aria-label="Close">
 						<span aria-hidden="true">&times;</span>
 					</button>
@@ -17,6 +17,7 @@ const setupItemPropertiesModal = () => {
 				<div class="modal-body">
 					<div class="row">
 						<div class="col-sm-6">
+						<h4 class="modal-title" id="exampleModalLabel">Details</h4>
 							<div class="form-group">
 								<label id="itemTypeLabel" for="itemTypeInput">Type</label>
 								<select class="form-control" id="itemTypeInput" placeholder=""></select>
@@ -28,30 +29,9 @@ const setupItemPropertiesModal = () => {
 								<small id="itemIdentifierHelp" class="form-text text-muted">The bale associated with this item.</small>
 							</div>
 							<div class="form-group">
-								<label for="itemImageInput">Image</label>
-								<div id="imageDiv"><img id="itemImage" height="100" width="100"></div>
-								<label class="btn btn-primary cursor-pointer" for="itemImageInput">Browse</label>
-									<input type="file" id="itemImageInput" placeholder="Select image" hidden></input>
-									<label class="btn btn-primary cursor-pointer" for="clearItemImageButton">Clear</label>
-								<button id="clearItemImageButton" class="btn btn-primary" hidden></button>
-								<small id="itemTypeHelp" class="form-text text-muted">Image to be displayed when visualising this item.</small>
-							</div>
-							<div class="form-group">
 								<label for="itemDescriptionInput">Description</label>
 								<textarea class="form-control" id="itemDescriptionInput" placeholder="Enter description here&hellip;" rows="3"></textarea>
 								<small id="itemDescriptionHelp" class="form-text text-muted">The description of this item.</small>
-							</div>
-						</div>
-						<div class="col-sm-6">
-							<div class="form-group">
-								<label for="itemBorderColourInput">Colour</label>
-								<input id="itemBorderColourInput" class="form-control " type="color" placeholder="Select colour&hellip;"></input>
-								<small id="itemBorderColourHelp" class="form-text text-muted">The colour to use for this node when visualising</small>
-							</div>
-							<div class="form-group">
-								<label for="itemFillColourInput">Fill Colour</label>
-								<input id="itemFillColourInput" class="form-control " type="color" placeholder="Select fill colour&hellip;"></input>
-								<small id="itemFillColourHelp" class="form-text text-muted">The fill colour to use for this node when visualising.</small>
 							</div>
 							<div class="form-group">
 								<label for="itemCreatedInput">Created</label>
@@ -64,10 +44,43 @@ const setupItemPropertiesModal = () => {
 								<small id="itemUpdatedHelp" class="form-text text-muted">Date when item was updated.</small>
 							</div>
 						</div>
+						<div class="col-sm-6">
+						<h4 class="modal-title" id="exampleModalLabel">Apperance</h4>
+							<div class="form-group">
+								<label for="itemBorderColourInput">Colour</label>
+								<input id="itemBorderColourInput" class="form-control " type="color" placeholder="Select colour&hellip;"></input>
+								<small id="itemBorderColourHelp" class="form-text text-muted">The colour to use for this node when visualising</small>
+							</div>
+							<div class="form-group">
+								<label for="itemFillColourInput">Fill Colour</label>
+								<input id="itemFillColourInput" class="form-control " type="color" placeholder="Select fill colour&hellip;"></input>
+								<small id="itemFillColourHelp" class="form-text text-muted">The fill colour to use for this node when visualising.</small>
+							</div>
+							<div class="form-group">
+								<label for="itemImageInput">Image</label>
+								<div id="imageDiv"><img id="itemImage" height="100" width="100"></div>
+								<label class="btn btn-primary cursor-pointer" for="itemImageInput">Browse</label>
+									<input type="file" id="itemImageInput" placeholder="Select image" hidden></input>
+									<label class="btn btn-primary cursor-pointer" for="clearItemImageButton">Clear</label>
+								<button id="clearItemImageButton" class="btn btn-primary" hidden></button>
+								<small id="itemTypeHelp" class="form-text text-muted">Image to be displayed when visualising this item.</small>
+							</div>
+						</div>
+					</div>
+					<div class="row">
+						<div class="col">
+						<h4 class="modal-title" id="exampleModalLabel">Linked items</h4>
+
+							<div style="overflow-x: auto; max-width white-space: nowrap;">
+								<table style="border-spacing: 5px; border-collapse: separate;">
+									<tbody id="linkContainer"></tbody>
+								</table>
+							</div>
+						</div>
 					</div>
 					<div class="modal-footer">
-					<button id="saveItemButton" class="btn btn-primary" data-dismiss="modal">Save</button>
-					<button id="cancelItemButton" class="btn btn-danger" data-dismiss="modal">Cancel</button>
+						<button id="saveItemButton" class="btn btn-primary" data-dismiss="modal">Save</button>
+						<button id="cancelItemButton" class="btn btn-danger" data-dismiss="modal">Cancel</button>
 					</div>
 				</div>
 			</div>
@@ -90,7 +103,7 @@ const viewItem = (item, parentItem, saveCallback, nodes, links, linkTypes, itemT
 	console.assert(saveItemButton != null, "Cannot find saveItemButton");
 	saveItemButton.addEventListener("click", event => {
 		if (saveCallback != null) {
-			
+
 			saveItem(saveCallback, parentItem, nodes, links, linkTypes, itemTypes);
 		}
 	});
@@ -155,16 +168,16 @@ const viewItem = (item, parentItem, saveCallback, nodes, links, linkTypes, itemT
 	document.getElementById("itemTypeInput").value = (item == null) ? "" : item.type.internal_id;
 	let itemColour = "";
 	let itemBackgroundColour = "";
-	if(item && item.type) {
+	if (item && item.type) {
 		itemColour = item.type.colour;
 		itemBackgroundColour = item.type.background_colour;
 	}
-	else if(item) {
+	else if (item) {
 		itemColour = "" + item.colour;
 		itemBackgroundColour = "" + item.background_colour;
 	}
 	document.getElementById("itemBorderColourInput").value = itemColour;
-	
+
 	document.getElementById("itemFillColourInput").value = (item == null) ? "" : itemBackgroundColour;
 	document.getElementById("itemCreatedInput").value = (item == null) ? "" : item.created;
 	document.getElementById("itemUpdatedInput").value = (item == null) ? "" : item.updated;
@@ -175,7 +188,59 @@ const viewItem = (item, parentItem, saveCallback, nodes, links, linkTypes, itemT
 	if ((item != null) && (item.custom_image != null)) {
 		document.getElementById("itemImage").src = "data:image/png;base64, " + btoa(item.custom_image);
 	}
-}
+
+	// Get all the links to this item. Use these links to get items one hop from the current node.
+	const itemLinks = links.filter(link => (link.source.internal_id == item.internal_id) || (link.target.internal_id == item.internal_id));
+
+	const linkedItems = itemLinks.map(link => {
+		let foundItem = null;
+		// Get the other end of the link as these ends are what should be displayed to the user.
+		if (link.source.internal_id == item.internal_id) {
+			foundItem = link.target;
+		}
+		else if (link.target.internal_id == item.internal_id) {
+			foundItem = link.source;
+		}
+		else {
+			console.log("Error!");
+		}
+		return foundItem;
+	});
+	console.log("linkedItems = " + linkedItems.length);
+	const itemsRow = d3.select("#linkContainer").append("tr");
+	const itemCells = itemsRow.selectAll("td")
+		.data(linkedItems)
+		.join("td")
+		.style("min-width", "200px")
+		.style("max-width", "250px")
+		.style("min-height", "200px")
+		.style("max-height", "250px")
+		.style("border", "1px solid gainsboro")
+		.style("border-radius", "4px")
+		.style("text-align", "center")
+		.style("vertical-align", "top")
+	itemCells
+		.append("h5")
+		.text(d => d.identifier)
+
+	itemCells
+		.append("div")
+		.attr("class", "")
+		.append("svg")
+		.attr("height", "100px")
+		.attr("viewBox", [0, 0, 20, 20])
+		.append("circle")
+		.attr("r", 10)
+		.attr("cx", 10)
+		.attr("cy", 10)
+		.style("fill", d => (d.background_colour ? d.background_colour : d.type.background_colour))
+
+	const listDescriptors = itemCells
+		.append("div")
+		.style("min-height", "50px")
+		.text(d => d.description);
+
+	}
 
 const saveItem = (saveCallback, parentNode, nodes, links, linkTypes, itemTypes) => {
 	// Get all the input elements from the modal dialog.

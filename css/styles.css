@@ -205,3 +205,43 @@
 	height: 200px !important;
   }
   
+  .modal {
+	padding: 0 !important;
+  }
+  .modal .modal-dialog {
+	width: 100%;
+	max-width: none;
+	height: 100%;
+	margin: 0;
+  }
+  .modal .modal-content {
+	height: 100%;
+	border: 0;
+	border-radius: 0;
+  }
+  .modal .modal-body {
+	overflow-y: auto;
+  }
+  /* .linkedItems {
+	  border: gainsboro 1px solid;
+	  min-height: 100px;
+	  vertical-align: text-top;
+	  margin-bottom: 10px;
+  }
+  .itemCell {
+	  min-width: 150px;
+	  max-width: 150px;
+	  min-width: 150px;
+	  vertical-align: top;
+	  padding: 5px;
+	  border: gainsboro 1px solid;
+  } */
+  .card-body {
+	  height: 200px;
+	  width: 150px;
+	  align-content: center;
+    /* min-height: 100px;
+	min-width: 100px;
+	max-height: 100px; */
+    margin-right: 5px;
+}
