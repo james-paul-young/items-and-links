@@ -1,4 +1,7 @@
 (async () => {
+	let links = null, linkTypes = null, items = null, itemTypes = null, displayOptions = null, simulation = null;;
+	let currentItemWithContextMenu = null;
+	let itemContextMenu = null;
 	const loadConnectors = projectId => {
 		return new Promise((resolve, reject) => {
 			// Get the currently active project.
@@ -55,11 +58,31 @@
 			};
 		});
 	}
+	linkTypes = await loadConnectors("qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY");
+	links = await linksDB.loadConnections("qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY");
+	const rawItems = await itemsDB.loadItems("qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY");
+	itemTypes = await loadItemTypes("qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY");
+	let deltaX = 0;
+	let deltaY = 0;
+	const dragHandler = d3.drag()
+		.on("drag", function (d) {
+			console.log(`dragging (${deltaX}, ${deltaY})`)
+			d3.select(this)
+				.attr("transform", "translate(" + (d3.event.x + deltaX) + ", " + (d3.event.y + deltaY) + ")");
+		})
+		.on("start", function () {
+			let current = d3.select(this);
+			//deltaX = current.attr("x") - d3.event.x;
+			//deltaY = current.attr("y") - d3.event.y;
+		})
+
+
+
 
 	const drag = simulation => {
 
 		function dragstarted(d) {
-			if (!d3.event.active && !currentNodeWithContextMenu) simulation.alphaTarget(0.3).restart();
+			if (!d3.event.active && !currentItemWithContextMenu) simulation.alphaTarget(0.3).restart();
 			d.fx = d.x;
 			d.fy = d.y;
 		}
@@ -80,20 +103,6 @@
 			.on("drag", dragged)
 			.on("end", dragended);
 	}
-	let deltaX = 0;
-	let deltaY = 0;
-	const dragHandler = d3.drag()
-		.on("drag", function (d) {
-			console.log(`dragging (${deltaX}, ${deltaY})`)
-			d3.select(this)
-				.attr("transform", "translate(" + (d3.event.x + deltaX) + ", " + (d3.event.y + deltaY) + ")");
-		})
-		.on("start", function () {
-			let current = d3.select(this);
-			//deltaX = current.attr("x") - d3.event.x;
-			//deltaY = current.attr("y") - d3.event.y;
-		})
-
 	const dashesAndEnds = {
 		end: [
 			{ id: 0, name: 'circle', path: 'M 0, 0  m -5, 0  a 5,5 0 1,0 10,0  a 5,5 0 1,0 -10,0', viewbox: '-5 -5 10 10' }
@@ -127,31 +136,24 @@
 				.attr('fill', colour);
 		}
 	}
-	const connectors = await loadConnectors("qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY");
-	const rawlinks = await linksDB.loadConnections("qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY");
-	const rawNodes = await itemsDB.loadItems("qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY");
-	const nodeTypes = await loadItemTypes("qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY");
-
-	const displayOptions = {
+	displayOptions = {
 		showLinks: true,
 		showLinkLabels: false,
-		showNodes: true,
-		showNodeLabels: true,
-		nodeRadius: 30,
+		showItems: true,
+		showItemLabels: true,
+		itemRadius: 30,
+		partialNameCriteria: "",
 	}
 
-	let currentNodeWithContextMenu = null;
-	let nodeContextMenu = null;
-
-	const nodes = rawNodes.map(node => {
-		const type_id = node.type;
-		node.type = nodeTypes.find(type => type.internal_id == type_id);
-		return node;
+	items = rawItems.map(item => {
+		const type_id = item.type;
+		item.type = itemTypes.find(type => type.internal_id == type_id);
+		return item;
 	})
 
 	const sortAndOrderLinks = (unsortedLinks) => {
 		const nonOrphanedLinks = unsortedLinks.filter(link => (link.source != null) && (link.target != null)).map(link => { link.set = null; return link; });
-		// Count the number of links in the set of links between each node.
+		// Count the number of links in the set of links between each item.
 		nonOrphanedLinks.forEach(firstlink => {
 			nonOrphanedLinks.forEach(secondlink => {
 				if (firstlink.set == null) { firstlink.set = 1; }
@@ -201,27 +203,16 @@
 		return nonOrphanedLinks;
 	};
 
-	const unsortedLinks = rawlinks.map(connection => {
+	const unmappedLinks = links.map(connection => {
 		const source_id = connection.source;
-		connection.source = nodes.find(item => item.internal_id == source_id);
+		connection.source = items.find(item => item.internal_id == source_id);
 		const target_id = connection.target;
-		connection.target = nodes.find(item => item.internal_id == target_id);
-		connection.connector = connectors.find(connector => connector.internal_id == connection.connector);
+		connection.target = items.find(item => item.internal_id == target_id);
+		connection.connector = linkTypes.find(connector => connector.internal_id == connection.connector);
 		return connection;
 	});
-	//	const links = sortAndOrderLinks(unsortedLinks);
 
-	const makeid = (length) => {
-		var result = '';
-		var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
-		var charactersLength = characters.length;
-		for (var i = 0; i < length; i++) {
-			result += characters.charAt(Math.floor(Math.random() * charactersLength));
-		}
-		return result;
-	}
-
-	const addLink = (links, source, target) => {
+	const addLink = (source, target) => {
 		return new Promise((resolve, reject) => {
 			linksDB.saveLinkToDB({ source: source, target: target, project_id: "qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY" }).then(savedLink => {
 				links.push(savedLink);
@@ -229,7 +220,7 @@
 			})
 		});
 	}
-	const saveNewLink = (linkToSave, links, linkTypes, items, itemTypes) => {
+	const saveNewLink = (linkToSave) => {
 
 		if (linkToSave.internal_id && (linkToSave.internal_id != "")) {
 			const linkInCollection = links.find(link => link.internal_id == linkToSave.internal_id)
@@ -239,59 +230,56 @@
 			linkInCollection.source = linkToSave.source;
 			linkInCollection.connector = linkToSave.connector;
 			linksDB.saveLinkToDB(linkInCollection).then(() => {
-				simulation
-					.nodes(nodes)
-					.force("link", d3.forceLink(links).id(d => d.id))
-				update(simulation, items, links, linkTypes, itemTypes, displayOptions);
+				// simulation
+				// 	.items(items)
+				// 	.force("link", d3.forceLink(links).id(d => d.id))
+				update();
 				simulation.alpha(0.01).restart();
 			})
 		}
 		console.log(linkToSave);
 	}
-	const deleteLink = async (link, links, linkTypes, items, itemTypes) => {
+	const deleteLink = async (link) => {
 		const linkIndex = links.indexOf(link);
 		if (linkIndex > -1) {
 			links.splice(linkIndex, 1);
 		}
 		linksDB.deleteLinkFromDB(link.internal_id).then(result => {
-			simulation
-				.nodes(nodes)
-				.force("link", d3.forceLink(links).id(d => d.id))
-			update(simulation, nodes, links, linkTypes, itemTypes, displayOptions);
+			// simulation
+			// 	.items(items)
+			// 	.force("link", d3.forceLink(links).id(d => d.id))
+			update();
 			simulation.alpha(0.01).restart();
 
 		});
 	}
 
-	let itemPropertiesModal = null;
-	let linkPropertiesModal = null;
-
 	/**
-	 * Adds the node and link to the force simulation, hides the context menu and adds a small amount of reheating to the layout.
+	 * Adds the item and link to the force simulation, hides the context menu and adds a small amount of reheating to the layout.
 	 * @param {d3.forceSimulation} simulation The force simulation
-	 * @param {Array} nodes The nodes drawn on the force simulation
-	 * @param {Array} links The links between nodes drawn on the force simulation
-	 * @param {object} source The d3 node from which the new node will be linked to.
-	 * @param {object} link The d3 link between the source node and the new node.
-	 * @param {object} node The node to add.
+	 * @param {Array} items The items drawn on the force simulation
+	 * @param {Array} links The links between items drawn on the force simulation
+	 * @param {object} source The d3 item from which the new item will be linked to.
+	 * @param {object} link The d3 link between the source item and the new item.
+	 * @param {object} item The item to add.
 	 */
-	const addItem = async (node, parentNode, nodes, links, linkTypes, itemTypes) => {
-		if (node != null) {
-			const newNode = { x: parentNode.x + 15, y: parentNode.y + 15, ...node }
-			newNode.project_id = "qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY";
+	const addItem = async (item, parentItem) => {
+		if (item != null) {
+			const newItem = { x: parentItem.x + 15, y: parentItem.y + 15, ...item }
+			newItem.project_id = "qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY";
 			// // Temporary until SaveItem function added here.
 			// const newInternal_id = makeid(20);
-			// newNode.internal_id = newInternal_id;
+			// newItem.internal_id = newInternal_id;
 			// Add created/updated dates.
-			const savedNode = await itemsDB.saveItemToDB(newNode);
-			nodes.push(savedNode);
+			const savedItem = await itemsDB.saveItemToDB(newItem);
+			items.push(savedItem);
 
-			linksDB.saveLinkToDB({ source: parentNode, target: savedNode, project_id: "qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY" }).then(result => {
+			linksDB.saveLinkToDB({ source: parentItem, target: savedItem, project_id: "qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY" }).then(result => {
 				links.push(result);
-				simulation
-					.nodes(nodes)
-					.force("link", d3.forceLink(links).id(d => d.id))
-				update(simulation, nodes, links, linkTypes, itemTypes, displayOptions);
+				// simulation
+				// 	.items(items)
+				// 	.force("link", d3.forceLink(links).id(d => d.id))
+				update();
 				simulation.alpha(0.01).restart();
 
 			});
@@ -301,49 +289,46 @@
 		}
 	}
 
-	const deleteItem = (node, parentNode, nodes, links, linkTypes, itemTypes) => {
-		nodeContextMenu.style("visibility", "hidden")
-		currentNodeWithContextMenu = null;
-		const nodeIndex = nodes.indexOf(node);
-		if (nodeIndex > -1) {
-			nodes.splice(nodeIndex, 1);
+	const deleteItem = (item, parentItem) => {
+		itemContextMenu.style("visibility", "hidden")
+		currentItemWithContextMenu = null;
+		const itemIndex = items.indexOf(item);
+		if (itemIndex > -1) {
+			items.splice(itemIndex, 1);
 		}
-		// Find all links to/from this node.
-		const linksToNode = links.filter(link => (link.source.internal_id == node.internal_id) || (link.target.internal_id == node.internal_id));
+		// Find all links to/from this item.
+		const linksToItem = links.filter(link => (link.source.internal_id == item.internal_id) || (link.target.internal_id == item.internal_id));
 		// Remove those links from the general simulation links.
-		linksToNode.forEach(async linkToNode => {
-			const linkToNodeIndex = links.indexOf(linkToNode);
-			if (linkToNodeIndex > -1) {
-				links.splice(linkToNodeIndex, 1);
+		linksToItem.forEach(async linkToItem => {
+			const linkToItemIndex = links.indexOf(linkToItem);
+			if (linkToItemIndex > -1) {
+				links.splice(linkToItemIndex, 1);
 			}
-			await linksDB.deleteLinkFromDB(linkToNode.internal_id);
+			await linksDB.deleteLinkFromDB(linkToItem.internal_id);
 		});
-		deleteItemFromDB(node.internal_id).then(result => {
-			simulation
-				.nodes(nodes)
-				.force("link", d3.forceLink(links).id(d => d.id))
-			update(simulation, nodes, links, linkTypes, itemTypes, displayOptions);
+		deleteItemFromDB(item.internal_id).then(result => {
+			// simulation
+			// 	.items(items)
+			// 	.force("link", d3.forceLink(links).id(d => d.id))
+			update();
 			simulation.alpha(0.01).restart();
 		});
 	}
-	const saveItem = async (node, parentNode, nodes, links, linkTypes, itemTypes) => {
+	const saveItem = async (item, parentItem, items, links, linkTypes, itemTypes) => {
 		console.log("removing dialogue")
 		document.body.removeChild(document.getElementById("itemModal"));
-		if (node != null) {
-			const existingNode = nodes.find(n => n.internal_id == node.internal_id);
-			console.assert(existingNode != null, "Cannot find node in existing nodes.")
-			existingNode.identifier = node.identifier;
-			existingNode.description = node.description;
-			existingNode.colour = node.colour;
-			existingNode.custom_image = node.custom_image;
-			existingNode.fill_colour = node.fill_colour;
-			existingNode.type = node.type;
+		if (item != null) {
+			const existingItem = items.find(n => n.internal_id == item.internal_id);
+			console.assert(existingItem != null, "Cannot find item in existing items.")
+			existingItem.identifier = item.identifier;
+			existingItem.description = item.description;
+			existingItem.colour = item.colour;
+			existingItem.custom_image = item.custom_image;
+			existingItem.fill_colour = item.fill_colour;
+			existingItem.type = item.type;
 			console.log("Saving...");
-			itemsDB.saveItemToDB(existingNode).then(result => {
-				simulation
-					.nodes(nodes)
-					.force("link", d3.forceLink(links).id(d => d.id))
-				update(simulation, nodes, links, linkTypes, itemTypes, displayOptions);
+			itemsDB.saveItemToDB(existingItem).then(result => {
+				update();
 				simulation.alpha(0.01).restart();
 			});
 		}
@@ -351,8 +336,248 @@
 			console.log("Not saving...")
 		}
 	}
-	// Context menu for a node.
-	const createNodeContextMenu = (simulation, nodes, links, linkTypes, itemTypes, displayOptions) => {
+	const exportAsJSON = () => {
+		Promise.allSettled([
+			linksDB.loadConnections("qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY"),
+			itemsDB.loadItems("qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY"),
+			linkTypesDB.loadConnectors("qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY"),
+			itemTypesDB.loadTypes("qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY"),
+		]).then(results => {
+			const exportData = {
+				connections: results[0].value,
+				things: results[1].value,
+				connectors: results[2].value,
+				types: results[3].value,
+				project: JSON.parse(`{"internal_id":"qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY","identifier":"Capabilities","description":"Business Capability Model","_created":"2020-07-29T01:39:54.712Z","_updated":"2020-07-29T04:50:49.185Z","active":true}`)
+			};
+			console.log("Actions click!");
+			const exportJSON = document.createElement("a");
+			const blob = new Blob([JSON.stringify(exportData)], { type: "text/JSON; charset=utf-8;" });
+			const url = URL.createObjectURL(blob);
+			exportJSON.href = url;
+			exportJSON.setAttribute("download", "export.JSON");
+			exportJSON.click();
+
+		})
+
+	}
+	const exportasCSV = () => {
+		Promise.allSettled([
+			linksDB.loadConnections("qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY"),
+			itemsDB.loadItems("qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY"),
+			linkTypesDB.loadConnectors("qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY"),
+			itemTypesDB.loadTypes("qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY"),
+		]).then(results => {
+			const exportData = {
+				connections: results[0].value,
+				things: results[1].value,
+				connectors: results[2].value,
+				types: results[3].value,
+				project: JSON.parse(`{"internal_id":"qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY","identifier":"Capabilities","description":"Business Capability Model","_created":"2020-07-29T01:39:54.712Z","_updated":"2020-07-29T04:50:49.185Z","active":true}`)
+			};
+			const mappedConnections = exportData.connections.map(connection => {
+				const connector = linkTypes.find(connector => connector.internal_id == connection.connector);
+				const source = exportData.things.find(thing => thing.internal_id == connection.source);
+				const target = exportData.things.find(thing => thing.internal_id == connection.target);
+				connection.connector = (connector ? connector.identifier : ""); ''
+				connection.source = (source ? source.identifier : "");
+				connection.target = (target ? target.identifier : "");
+				return connection
+			});
+			console.log("Actions click!");
+			const items = mappedConnections;
+			const replacer = (key, value) => value === null ? '' : value // specify how you want to handle null values here
+			const header = Object.keys(items[0])
+			let csv = items.map(row => header.map(fieldName => JSON.stringify(row[fieldName], replacer)).join(','))
+			csv.unshift(header.join(','))
+			csv = csv.join('\r\n')
+			const exportJSON = document.createElement("a");
+			const blob = new Blob([csv], { type: "text/csv; charset=utf-8;" });
+			const url = URL.createObjectURL(blob);
+			exportJSON.href = url;
+			exportJSON.setAttribute("download", "export.csv");
+			exportJSON.click();
+
+			console.log(csv)
+			// const exportJSON = document.createElement("a");
+			// const blob = new Blob([JSON.stringify(exportData)], { type: "text/JSON; charset=utf-8;" });
+			// const url = URL.createObjectURL(blob);
+			// exportJSON.href = url;
+			// exportJSON.setAttribute("download", "export.JSON");
+			// exportJSON.click();
+
+		})
+	}
+
+	const setupFilterDefaults = () => {
+		displayOptions.filter = {
+			visible: {
+				connectors: linkTypes.map(linkType => linkType.internal_id),
+				types: itemTypes.map(itemType => itemType.internal_id),
+			},
+			included: {
+				connectors: linkTypes.map(linkType => linkType.internal_id),
+				types: itemTypes.map(itemType => itemType.internal_id),
+			}
+		};
+		const filters = filterDB.loadFilters("qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY");
+		filters.then(result => {
+			const definedFiltersHTML = result
+				.sort((a, b) => a.identifier.localeCompare(b.identifier))
+				.map(filter => `<option value="${filter.internal_id}">${filter.identifier}</option>`);
+			const predefinedfilters = document.getElementById("predefinedfilters");
+			predefinedfilters.innerHTML = `<option value = "">All</option>` + definedFiltersHTML.join("");
+			predefinedfilters.addEventListener("change", event => {
+				if (event.currentTarget.value.length == 0) {
+					displayOptions.filter = {
+						visible: {
+							connectors: linkTypes.map(linkType => linkType.internal_id),
+							types: itemTypes.map(itemType => itemType.internal_id),
+						},
+						included: {
+							connectors: linkTypes.map(linkType => linkType.internal_id),
+							types: itemTypes.map(itemType => itemType.internal_id),
+						}
+					};
+				}
+				else {
+					displayOptions.filter = result.find(item => item.internal_id == event.currentTarget.value);
+				}
+				update();
+				simulation.alpha(0.01).restart();
+			});
+
+		})
+	}
+	const saveFilterOptions = (filterOptions) => {
+		filterOptions.project_id = "qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY";
+		displayOptions.filter = filterOptions;
+		console.log(filterOptions);
+		filterDB.saveFilterToDB(filterOptions)
+		update();
+		simulation.alpha(0.01).restart();
+	}
+	const useFilterOptions = (filterOptions) => {
+		filterOptions.project_id = "qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY";
+		displayOptions.filter = filterOptions;
+		console.log(filterOptions);
+		update();
+		simulation.alpha(0.01).restart();
+	}
+	const filter = (simulation, items, links, linkTypes, itemTypes, displayOptions) => {
+		const filterModal = document.getElementById("filterModal");
+		if (filterModal) {
+			document.body.removeChild(filterModal);
+		}
+		document.body.appendChild(setupFilterModal());
+		filterDB.loadFilters("qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY").then(filters => {
+			viewFilter(simulation, items, links, linkTypes, itemTypes, displayOptions.filter, saveFilterOptions, filters, useFilterOptions);
+			$('#filterModal').modal();
+		});
+	}
+	const createActionsMenu = (simulation, items, links, linkTypes, itemTypes, displayOptions) => {
+		d3.select("#actionsMenu").remove();
+		const svg = d3.select("#chart > svg");
+		const svgBounds = svg.attr("viewBox").split(',');
+		const actionsMenu = svg
+			.data([0])
+			.append("g")
+			.attr("id", "actionsMenu")
+			.attr("transform", `translate(${parseInt(svgBounds[2]) - 100}, ${parseInt(svgBounds[3]) - 100})`)
+
+		actionsMenu
+			.append("circle")
+			.attr("r", 30)
+			.style("stroke-width", "2px")
+			.style("stroke", "black")
+			.style("fill", "WhiteSmoke")
+
+		const data = [
+			{
+				value: 1,
+				action: "Export as CSV",
+				icon: "f6dd",
+			},
+			{
+				value: 1,
+				action: "Export as JSON",
+				icon: "f019",
+			},
+			{
+				value: 1,
+				action: "Filter",
+				icon: "f0b0",
+			},
+		];
+		const pie = d3.pie()
+			.value(d => d.value.value)
+		const data_ready = pie(d3.entries(data))
+
+		// Item is expanded to twice it's size when user hovers mouse over it. Need to account for this when drawing context menu.
+		const expandedItemRadius = 30 * 2;
+		const arc1 = d3.arc()
+			.innerRadius(0)
+			.outerRadius(100)
+			.cornerRadius(1);
+
+		const arc2 = d3.arc()
+			.innerRadius(50)
+			.outerRadius(100)
+			.cornerRadius(1);
+
+		actionsMenu.selectAll(".actionsMenu")
+			.data(data_ready)
+			.join('text')
+			.attr("class", "fas icon labelName")
+			.attr('d', arc2)
+			.attr('transform', d => {
+				let pos = arc2.centroid(d);
+				pos[0] = pos[0] - 10;
+				pos[1] = pos[1] + 5;
+				//console.log(pos);
+				return 'translate(' + pos + ')';
+			})
+			.text(d => {
+				//console.log(d);
+				return ((d.data.value.icon.length == 0) ? "" : String.fromCharCode(parseInt(d.data.value.icon, 16)));
+			})
+			.append("title")
+			.text(d => d.data.value.action)
+		actionsMenu.selectAll('.actionsMenu')
+			.data(data_ready)
+			.enter()
+			.append("path")
+			.style("stroke", "transparent")
+			.style("opacity", 0.3)
+			.attr('d', arc1)
+			.on("click", d => {
+				switch (d.data.value.action.toLowerCase()) {
+					case "export as json": {
+						exportAsJSON();
+						break;
+					}
+					case "export as csv": {
+						exportasCSV();
+						break;
+					}
+					case "filter": {
+						filter(simulation, items, links, linkTypes, itemTypes, displayOptions);
+						break;
+					}
+				}
+			})
+			.append("title")
+			.text(d => d.data.value.action)
+		// .on("mouseout", () => {
+		// 	const pendingLink = document.querySelector(".link");
+		// 	if (!pendingLink) {
+		// 		itemContextMenu.style("visibility", "hidden")
+		// 	}
+		// })
+
+	}
+	// Context menu for a item.
+	const createItemContextMenu = () => {
 		const data = [
 			{
 				value: 1,
@@ -379,25 +604,25 @@
 			.value(d => d.value.value)
 		const data_ready = pie(d3.entries(data))
 
-		// Node is expanded to twice it's size when user hovers mouse over it. Need to account for this when drawing context menu.
-		const expandedNodeRadius = displayOptions.nodeRadius * 2;
+		// Item is expanded to twice it's size when user hovers mouse over it. Need to account for this when drawing context menu.
+		const expandedItemRadius = displayOptions.itemRadius * 2;
 		const arc1 = d3.arc()
 			.innerRadius(0)
-			.outerRadius(expandedNodeRadius + 30)
+			.outerRadius(expandedItemRadius + 30)
 			.cornerRadius(1);
 
 		const arc2 = d3.arc()
-			.innerRadius(expandedNodeRadius + 5)
-			.outerRadius(expandedNodeRadius + 25)
+			.innerRadius(expandedItemRadius + 5)
+			.outerRadius(expandedItemRadius + 25)
 			.cornerRadius(1);
 		const svg = d3.select("#drawingArea");
 
-		const nodeContextMenu = svg.append("g")
-			.attr("id", "nodeContextMenu")
-			.attr("class", "nodeContextMenu")
+		const itemContextMenu = svg.append("g")
+			.attr("id", "itemContextMenu")
+			.attr("class", "itemContextMenu")
 			.style("visibility", "hidden")
 
-		nodeContextMenu.selectAll("nodeContextMenu")
+		itemContextMenu.selectAll("itemContextMenu")
 			.data(data_ready)
 			.join('text')
 			.attr("class", "fas icon labelName")
@@ -413,7 +638,7 @@
 				//console.log(d);
 				return ((d.data.value.icon.length == 0) ? "" : String.fromCharCode(parseInt(d.data.value.icon, 16)));
 			})
-		nodeContextMenu.selectAll('nodeContextMenu')
+		itemContextMenu.selectAll('itemContextMenu')
 			.data(data_ready)
 			.enter()
 			.append("path")
@@ -423,15 +648,15 @@
 			.on("mouseout", () => {
 				const pendingLink = document.querySelector(".link");
 				if (!pendingLink) {
-					nodeContextMenu.style("visibility", "hidden")
-					currentNodeWithContextMenu = null;
+					itemContextMenu.style("visibility", "hidden")
+					currentItemWithContextMenu = null;
 				}
 			})
 			.on("mouseover", function () { d3.select(this).style("cursor", "pointer") })
 			.on("click", function (d) {
 				switch (d.data.value.action) {
 					case "Delete": {
-						deleteItem(currentNodeWithContextMenu, null, nodes, links, itemTypes);
+						deleteItem(currentItemWithContextMenu, null, items, links, itemTypes);
 						break;
 					}
 					case "Add": {
@@ -440,13 +665,8 @@
 							document.body.removeChild(itemModal);
 						}
 						document.body.appendChild(setupItemPropertiesModal());
-						viewItem(null, currentNodeWithContextMenu, addItem, nodes, links, linkTypes, itemTypes);
+						viewItem(null, currentItemWithContextMenu, addItem, items, links, linkTypes, itemTypes, displayOptions);
 						$('#itemModal').modal();
-						// const newInternal_id = makeid(20);
-						// const newNode = { x: currentNodeWithContextMenu.x + 15, y: currentNodeWithContextMenu.y + 15, internal_id: newInternal_id, identifier: "Hello world", type: { colour: "black", background_colour: "black" } }
-						// const newLink = { source: currentNodeWithContextMenu, target: newNode }
-
-						//addItem(nodes, links, newNode);
 						break;
 					}
 					case "Link": {
@@ -457,12 +677,12 @@
 						const mouse = d3.mouse(d3.select("#chart > svg").node());
 						const transform = d3.zoomTransform(d3.select("#chart > svg").node());
 						const mouseWithZoom = transform.invert(mouse);
-						//console.log(`line from ${currentNodeWithContextMenu.x}, ${currentNodeWithContextMenu.y} to ${mouseWithZoom[0]}, ${mouseWithZoom[1]}`)
+						//console.log(`line from ${currentItemWithContextMenu.x}, ${currentItemWithContextMenu.y} to ${mouseWithZoom[0]}, ${mouseWithZoom[1]}`)
 						svg
 							.append("line")
 							.lower()
-							.attr("x1", currentNodeWithContextMenu.x)
-							.attr("y1", currentNodeWithContextMenu.y)
+							.attr("x1", currentItemWithContextMenu.x)
+							.attr("y1", currentItemWithContextMenu.y)
 							.attr("x2", mouseWithZoom[0])
 							.attr("y2", mouseWithZoom[1])
 							.attr("class", "link")
@@ -476,25 +696,20 @@
 							document.body.removeChild(itemModal);
 						}
 						document.body.appendChild(setupItemPropertiesModal());
-						viewItem(currentNodeWithContextMenu, null, saveItem, nodes, links, linkTypes, itemTypes);
+						viewItem(currentItemWithContextMenu, null, saveItem, items, links, linkTypes, itemTypes);
 						$('#itemModal').modal()
 						break;
 					}
 				}
-				// simulation
-				// 	.nodes(nodes)
-				// 	.force("link", d3.forceLink(links).id(d => d.id))
-				// update(simulation, nodes, links, nodeTypes, displayOptions);
-				// simulation.alpha(0.01).restart();
 				console.log(d.data.value.action)
 			})
 
 
-		return nodeContextMenu;
+		return itemContextMenu;
 	}
 	const setupSimulation = (width, height) => {
 		const parentSVG = d3.select("#chart").append("svg")
-			.attr("viewBox", [0, 0, width, height - 80])
+			.attr("viewBox", [0, 0, width, height - 110])
 			.call(d3.zoom().on("zoom", () => {
 				const svg = d3.select("#drawingArea");
 				svg.attr("transform", d3.event.transform);
@@ -508,18 +723,12 @@
 				const pendingLink = document.querySelector(".link");
 				if (pendingLink) {
 					d3.select(".link")
-						.attr("x1", currentNodeWithContextMenu.x)
-						.attr("y1", currentNodeWithContextMenu.y)
+						.attr("x1", currentItemWithContextMenu.x)
+						.attr("y1", currentItemWithContextMenu.y)
 						.attr("x2", xy1[0])
 						.attr("y2", xy1[1])
 				}
 			})
-		// .on("click", function() {
-		// 	const pendingLink = document.querySelector(".pendingLink");
-		// 	if(!pendingLink) {
-		// 		console.log("SVG Click!");
-		// 	}
-		// });
 		parentSVG
 			.append("g")
 			.attr("id", "drawingArea");
@@ -537,37 +746,99 @@
 		return simulation;
 	};
 
-	const update = (simulation, nodes, unsortedLinks, linkTypes, itemTypes, displayOptions) => {
+	const filterLinks = (filteredItems, unfilteredLinks) => {
+		const linksWithoutNodes = unfilteredLinks.filter(link => {
+			let sourceFound = false;
+			let targetFound = false;
+			if (link.target != null) {
+				targetFound = (link.target != null) && filteredItems.some(item => item.internal_id == link.target.internal_id);
+			}
+			if (link.source != null) {
+				sourceFound = (link.target != null) && filteredItems.some(item => item.internal_id == link.source.internal_id);
+			}
+			return targetFound && sourceFound;
+		})
+		const linksNotIncluded = linksWithoutNodes.filter(link => {
+			let included = false;
+			if (link.connector != null) {
+				included = displayOptions.filter.included.connectors.find(includedLink => includedLink == link.connector.internal_id);
+			}
+			else {
+				included = true;
+			}
+			return included;
+		})
+		return linksNotIncluded;
+	}
+	const filterItems = (items) => {
+		let filteredItems = items.filter(item => {
+			let include = false;
+			if (item.type != null) {
+				include = displayOptions.filter.included.types.find(includedType => includedType == item.type.internal_id);
+			}
+			else {
+				include = true;
+			}
+			return include;
+		});
+		return filteredItems;
+	}
+	const update = () => {
+		const filteredItems = filterItems(items);
+		const sortedLinks = sortAndOrderLinks(filterLinks(filteredItems, links));
 		simulation
-			.nodes(nodes)
-			.force("link", d3.forceLink(unsortedLinks).id(d => d.id))
+			.nodes(filteredItems)
+			.force("link", d3.forceLink(sortedLinks).id(d => d.id))
 		const svg = d3.select("#drawingArea");
-		const links = sortAndOrderLinks(unsortedLinks);
 		// These SVG element types need to be added in a very specific order for the user interface mechanics to work correctly.
 		let text = null;
-		if (displayOptions.showNodeLabels) {
+		if (displayOptions.showItemLabels) {
 			text = svg
 				.selectAll(".text")
-				.data(nodes)
+				.data(filteredItems)
 				.join("text")
 				.attr("class", "text")
 				.attr("text-anchor", "middle")
 				.attr("alignment-baseline", "middle")
 				.text(d => d.identifier)
 				.attr("x", function (d) {
-					// Get the half-length of the text for centering on the node.
+					// Get the half-length of the text for centering on the item.
 					d.xOffset = this.getBBox().width / 2;
 				})
 				.attr("y", function (d) {
-					// Get the height of the text for positioning underneath the node.
-					d.yOffset = this.getBBox().height + displayOptions.nodeRadius;
+					// Get the height of the text for positioning underneath the item.
+					d.yOffset = this.getBBox().height + displayOptions.itemRadius;
 				})
+				.style("opacity", d => {
+					let opacity = "0.05";
+					if (displayOptions.partialNameCriteria.length > 0) {
+						if ((d.identifier != null) && (d.identifier.toLowerCase().indexOf(displayOptions.partialNameCriteria.toLowerCase()) >= 0)) {
+							opacity = "1";
+						}
+					}
+					else {
+						opacity = "1";
+					}
+					return opacity;
+				})
+				.style("visibility", d => {
+					let visibility = "hidden";
+					if (displayOptions.filter.visible != null) {
+						if (displayOptions.filter.visible.types.filter(item => (d.type != null) && (item == d.type.internal_id)).length > 0) {
+							visibility = "visible";
+						}
+					}
+					return visibility;
+				})
+
+
 		}
 		let link = null;
 		if (displayOptions.showLinks) {
+			console.log("sortedLinks.length = " + sortedLinks.length)
 			link = svg
 				.selectAll(".path")
-				.data(links)
+				.data(sortedLinks)
 				.join("path")
 				.attr("id", d => d.internal_id)
 				.lower()
@@ -576,6 +847,30 @@
 				.attr("stroke", d => (d.connector ? d.connector.colour : "gainsboro"))
 				.attr("fill", "transparent")
 				.attr('marker-end', d => `url(#marker_${(d.connector ? d.connector.colour.substring(1) : "gainsboro") + (d.connector ? d.connector.marker : "")})`)
+				.style("visibility", d => {
+					let visibility = "hidden";
+					if (displayOptions.filter.visible != null) {
+						if (displayOptions.filter.visible.connectors.filter(item => (d.connector != null) && (item == d.connector.internal_id)).length > 0) {
+							visibility = "visible";
+						}
+						else if (d.connector == null) {
+							visibility = "visible";
+						}
+					}
+					return visibility;
+				})
+				.style("opacity", d => {
+					let opacity = "0.05";
+					if (displayOptions.partialNameCriteria.length > 0) {
+						if ((d.identifier != null) && (d.identifier.toLowerCase().indexOf(displayOptions.partialNameCriteria.toLowerCase()) >= 0)) {
+							opacity = "1";
+						}
+					}
+					else {
+						opacity = "1";
+					}
+					return opacity;
+				})
 				.on("mouseenter", function (d) {
 					// Fatten the line on mouse entry to better allow for link context menu.
 					d3.select(this).transition(750).attr("stroke-width", "5")
@@ -588,20 +883,17 @@
 					d3.select(this).style("cursor", "pointer");
 				})
 				.on("click", function (d) {
-					if (linkPropertiesModal) {
-						document.body.removeChild(linkPropertiesModal);
-					}
 					const linkModal = document.getElementById("linkModal");
 					if (linkModal) {
 						document.body.removeChild(linkModal);
 					}
 					document.body.appendChild(setupLinkPropertiesModal());
-					viewLink(d, links, linkTypes, nodes, itemTypes, saveNewLink, deleteLink);
+					viewLink(d, links, linkTypes, items, itemTypes, saveNewLink, deleteLink);
 					$('#linkModal').modal();
 				})
 				.each(d => {
 					if (d.connector) {
-						createMarkerEnd("marker_", dashesAndEnds, d.connector.marker, d.connector.colour, "5px", "5px", displayOptions.nodeRadius + 4, 0);
+						createMarkerEnd("marker_", dashesAndEnds, d.connector.marker, d.connector.colour, "5px", "5px", displayOptions.itemRadius + 4, 0);
 					}
 				})
 		}
@@ -610,7 +902,7 @@
 		if (displayOptions.showLinkLabels) {
 			linkText = svg
 				.selectAll(".linkText")
-				.data(links)
+				.data(sortedLinks)
 				.join("text")
 				.attr("class", "linkText")
 				.style("color", d => d3.select("body").attr("color"))
@@ -620,32 +912,75 @@
 				.attr("text-anchor", "middle")
 				.attr("href", d => "#" + d.internal_id)
 				.text(d => (d.connector ? d.connector.identifier : d.identifier + ""))
+				.style("opacity", d => {
+					let opacity = "0.05";
+					if (displayOptions.partialNameCriteria.length > 0) {
+						if ((d.identifier != null) && (d.identifier.toLowerCase().indexOf(displayOptions.partialNameCriteria.toLowerCase()) >= 0)) {
+							opacity = "1";
+						}
+					}
+					else {
+						opacity = "1";
+					}
+					return opacity;
+				})
+				.style("visibility", d => {
+					let visibility = "hidden";
+					if (displayOptions.filter.visible != null) {
+						if (displayOptions.filter.visible.connectors.filter(item => (d.connector != null) && (item == d.connector.internal_id)).length > 0) {
+							visibility = "visible";
+						}
+					}
+					return visibility;
+				})
+
+
 		}
 		// Context menu needs to be added here but it should not be added every time the diagram is updated.
-		if (nodeContextMenu == null) {
-			nodeContextMenu = createNodeContextMenu(simulation, nodes, unsortedLinks, linkTypes, itemTypes, displayOptions);
+		if (itemContextMenu == null) {
+			itemContextMenu = createItemContextMenu();
 		}
-		let node = null;
-		if (displayOptions.showNodes) {
-			node = svg
-				.selectAll(".node")
-				.data(nodes)
+		let item = null;
+		if (displayOptions.showItems) {
+			item = svg
+				.selectAll(".item")
+				.data(filteredItems)
 				.join("circle")
 				// .join("g")
-				.attr("class", "node")
+				.attr("class", "item")
 				.attr("id", d => "circle_" + d.internal_id)
 				// .append("circle")
-				// .attr("class", "nodeCircle")
+				// .attr("class", "itemCircle")
 				.attr("stroke", d => (d.type ? d.type.colour : "transparent"))
-				.attr("r", displayOptions.nodeRadius)
+				.attr("r", displayOptions.itemRadius)
 				.attr("fill", d => (d.type ? d.type.background_colour : "transparent"))
-				.attr('filter', d => `url(#dropshadow)`)
+				.style("opacity", d => {
+					let opacity = "0.05";
+					if (displayOptions.partialNameCriteria.length > 0) {
+						if ((d.identifier != null) && (d.identifier.toLowerCase().indexOf(displayOptions.partialNameCriteria.toLowerCase()) >= 0)) {
+							opacity = "1";
+						}
+					}
+					else {
+						opacity = "1";
+					}
+					return opacity;
+				})
+				.style("visibility", d => {
+					let visibility = "hidden";
+					if (displayOptions.filter.visible != null) {
+						if (displayOptions.filter.visible.types.filter(item => (d.type != null) && (item == d.type.internal_id)).length > 0) {
+							visibility = "visible";
+						}
+					}
+					return visibility;
+				})
 				.call(drag(simulation))
 				.on("mouseenter", function (d) {
-					d3.select(this).transition(750).attr("r", displayOptions.nodeRadius * 2);
+					d3.select(this).transition(750).attr("r", displayOptions.itemRadius * 2);
 				})
 				.on("mouseout", function (d) {
-					d3.select(this).transition(750).attr("r", displayOptions.nodeRadius);
+					d3.select(this).transition(750).attr("r", displayOptions.itemRadius);
 					d3.select(this).style("cursor", "default");
 					const tooltip = d3.select("#tooltip");
 					tooltip.style("visibility", "hidden")
@@ -666,28 +1001,31 @@
 				.on("click", d => {
 					const pendingLink = document.querySelector(".link");
 					if (pendingLink == null) {
-						currentNodeWithContextMenu = d;
-						nodeContextMenu
+						currentItemWithContextMenu = d;
+						itemContextMenu
 							.attr("transform", `translate(${d.x}, ${d.y})`)
 							.style("visibility", "visible")
 						simulation.stop();
 					}
 					else {
 						d3.select(".link").remove();
-						nodeContextMenu.style("visibility", "hidden")
-						addLink(unsortedLinks, currentNodeWithContextMenu, d).then(() => {
-							simulation
-								.nodes(nodes)
-								.force("link", d3.forceLink(unsortedLinks).id(d => d.id))
-							update(simulation, nodes, unsortedLinks, linkTypes, itemTypes, displayOptions);
+						itemContextMenu.style("visibility", "hidden")
+						addLink(currentItemWithContextMenu, d).then(() => {
+							// simulation
+							// 	.items(items)
+							// 	.force("link", d3.forceLink(links).id(d => d.id))
+							update();
 							simulation.alpha(0.005).restart();
 
 						});
 					}
+				})
+				.each(d => {
+					setupRadialGradientFilter(`radialGradient_${d.type.internal_id}`, d.type.background_colour);
 				});
 		}
-		const footer = document.querySelector("footer");
-		footer.innerHTML = `Items: ${nodes.length}, Links: ${links.length}.`;
+		const infoDisplay = document.getElementById("info");
+		infoDisplay.innerHTML = `Items: ${items.length}, Links: ${links.length}.`;
 
 		simulation.on("tick", () => {
 			const linkArc = (d, i) => {
@@ -706,8 +1044,8 @@
 				linkText.attr("d", (d, i) => textArc(d, i));
 
 			}
-			if (node != null) {
-				node
+			if (item != null) {
+				item
 					.attr("cx", d => d.x)
 					.attr("cy", d => d.y)
 			}
@@ -716,16 +1054,25 @@
 					.attr("x", d => d.x)
 					.attr("y", d => d.y + d.yOffset)
 			}
-			if (currentNodeWithContextMenu) {
-				nodeContextMenu.attr("transform", `translate(${currentNodeWithContextMenu.x}, ${currentNodeWithContextMenu.y})`)
+			if (currentItemWithContextMenu) {
+				itemContextMenu.attr("transform", `translate(${currentItemWithContextMenu.x}, ${currentItemWithContextMenu.y})`)
 			}
 		});
-		const mappedConnectors = unsortedLinks.map(link => link.connector);
-		const connectorsInUse = [...new Set(mappedConnectors)];
+		const mappedLinks = sortedLinks.map(link => link.connector)
+			.sort((a, b) => {
+				let result = 0;
+				if((a && b) && (a.identifier != null) && (b.identifier != null)) {
+					result = a.identifier.localeCompare(b.identifier);
+				}
+				return result;
+			})
+		const linkTypesInUse = [...new Set(mappedLinks)];
 
-		const mappedNodeTypes = nodes.map(node => node.type);
-		const nodesTypesInUse = [...new Set(mappedNodeTypes)];
-		const createLegend = (connectors, itemTypes) => {
+		const mappedItemTypes = filteredItems
+			.map(item => item.type)
+			.sort((a, b) => a.identifier.localeCompare(b.identifier));
+		const itemsTypesInUse = [...new Set(mappedItemTypes)];
+		const createLegend = (linkTypesInUse, itemsTypesInUse) => {
 			const svg = d3.select("#chart > svg");
 			const legendItemHeight = 30;
 			const legendItemWidth = 90
@@ -747,7 +1094,7 @@
 				.style("stroke-width", "2px")
 				.style("stroke", "black")
 				.style("fill", "WhiteSmoke")
-				.attr("height", (((connectors ? connectors.length : 0) + (itemTypes ? itemTypes.length : 0)) * legendItemHeight) + legendCaptionHeight * 2 + "px")
+				.attr("height", (((linkTypesInUse ? linkTypesInUse.length : 0) + (itemsTypesInUse ? itemsTypesInUse.length : 0)) * legendItemHeight) + legendCaptionHeight * 2 + "px")
 				.attr("width", "350px")
 				.attr("rx", 15)
 
@@ -757,14 +1104,29 @@
 				.text("Key")
 				.attr("x", 15)
 				.attr("y", function () {
-					// Get the height of the text for positioning underneath the node.
+					// Get the height of the text for positioning underneath the item.
 					return this.getBBox().height;
 				})
 
-			if (connectors != null) {
-				legend.selectAll(".connectors")
-					.data(connectors)
-					.join("line")
+			if (linkTypesInUse != null) {
+				const legendConnectorItems = legend.selectAll("g.connector")
+					.data(linkTypesInUse)
+					.join("g")
+					.attr("class", "connector")
+				// .on("mouseenter", (d => {
+				// 	if (d) {
+				// 		highlighedType = d.internal_id;
+				// 		console.log("Setting type for " + d.internal_id)
+				// 		update(simulation, items, unmappedLinks, linkTypes, itemTypes, displayOptions);
+				// 	}
+				// }))
+				// .on("mouseleave", d => {
+				// 	highlighedType = null;
+				// 	console.log("Resetting type............................")
+				// 	update(simulation, items, unmappedLinks, linkTypes, itemTypes, displayOptions);
+				// })
+				legendConnectorItems
+					.append("line")
 					.attr("class", "legendItem")
 					.attr("x1", 15)
 					.attr("y1", (d, i) => { return (legendItemHeight * (i + 1) + legendCaptionHeight); })
@@ -775,87 +1137,58 @@
 					.attr('marker-end', d => (d ? `url(#legendMarker_${d.colour.substring(1)}${d.marker})` : ""))
 					.each(d => { if (d) { createMarkerEnd("legendMarker_", dashesAndEnds, d.marker, d.colour, "5px", "5px", 0, 0); } })
 
-				legend.selectAll(".connector-text")
-					.data(connectors)
-					.join("text")
+				legendConnectorItems
+					.append("text")
 					.attr("class", "connector-text")
-					.on("mouseover", (d => {
-
-					}))
 					.text(d => (d ? d.identifier : "Unspecified link type"))
 					.attr("x", legendItemWidth)
 					.attr("y", (d, i) => { return (legendItemHeight * (i + 1) + legendCaptionHeight + 5); })
 
 			}
 
-			if (itemTypes != null) {
-				legend.selectAll(".item-type")
-					.data(itemTypes)
-					.join("circle")
+			if (itemsTypesInUse != null) {
+				const legendItem = legend.selectAll("g.type")
+					.data(itemsTypesInUse)
+					.join("g")
+					.attr("class", "type")
+					.on("mouseover", function (d) {
+						console.log(d.identifier)
+					})
+				legendItem
+					.append("circle")
 					.attr("class", "item-type")
 					.attr("r", 10)
 					.attr("cx", legendItemWidth / 2)
-					.attr("cy", (d, i) => { return (legendItemHeight * ((itemTypes ? connectors.length : 0) + i + 1) + legendCaptionHeight); })
+					.attr("cy", (d, i) => { return (legendItemHeight * ((itemsTypesInUse ? linkTypesInUse.length : 0) + i + 1) + legendCaptionHeight); })
 					.style("stroke", d => (d ? d.colour : "black"))
 					.style("fill", d => (d ? d.background_colour : "black"))
-					.style("stroke-width", 2)
+					.style("stroke-width", 2);
 
-				legend.selectAll(".item-type-text")
-					.data(itemTypes)
-					.join("text")
+				legendItem
+					.append("text")
 					.attr("class", "item-type-text")
 					.text(d => (d ? d.identifier : "No Type"))
 					.attr("x", legendItemWidth)
-					.attr("y", (d, i) => { return (legendItemHeight * ((itemTypes ? connectors.length : 0) + i + 1) + legendCaptionHeight + 5); })
-
+					.attr("y", (d, i) => { return (legendItemHeight * ((itemsTypesInUse ? linkTypesInUse.length : 0) + i + 1) + legendCaptionHeight + 5); })
 			}
 		}
-		createLegend(connectorsInUse, nodesTypesInUse);
-
+		createLegend(linkTypesInUse, itemsTypesInUse);
 	};
-	const createActionsMenu = () => {
-		d3.select("#actionsMenu").remove();
-		const svg = d3.select("#chart > svg");
-		const svgBounds = svg.attr("viewBox").split(',');
-		const actionsMenu = svg
-			.data([0])
-			.append("g")
-			.attr("id", "actionsMenu")
-			.attr("transform", `translate(${parseInt(svgBounds[2]) - 100}, ${parseInt(svgBounds[3]) - 100})`)
-		actionsMenu
-			.append("circle")
-			.attr("r", displayOptions.nodeRadius)
-			.style("stroke-width", "2px")
-			.style("stroke", "black")
-			.style("fill", "WhiteSmoke")
-			.on("click", () => {
-				Promise.allSettled([
-					linksDB.loadConnections("qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY"),
-					itemsDB.loadItems("qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY"),
-					linkTypesDB.loadConnectors("qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY"),
-					itemTypesDB.loadTypes("qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY"),
-				]).then(results => {
-					const exportData = {
-						connections: results[0].value,
-						things: results[1].value,
-						connectors: results[2].value,
-						types: results[3].value,
-						project: JSON.parse(`{"internal_id":"qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY","identifier":"Capabilities","description":"Business Capability Model","_created":"2020-07-29T01:39:54.712Z","_updated":"2020-07-29T04:50:49.185Z","active":true}`)
-					};
-					console.log("Actions click!");
-					const exportJSON = document.createElement("a");
-					const blob = new Blob([JSON.stringify(exportData)], { type: "text/JSON; charset=utf-8;" });
-					const url = URL.createObjectURL(blob);
-					exportJSON.href = url;
-					exportJSON.setAttribute("download", "export.JSON");
-					exportJSON.click();
-
-				})
-			})
-
+	const searchInputEventHandler = (event) => {
+		simulation.stop();
+		console.log("change!" + event.currentTarget.value);
+		displayOptions.partialNameCriteria = event.currentTarget.value;
+		update();
+		simulation.alpha(0.005).restart();
+	}
+	const setupInputEventHandlers = () => {
+		const searchInput = document.getElementById("searchInput");
+		console.log("setting up keyup handler.")
+		searchInput.addEventListener("keyup", event => searchInputEventHandler(event))
 	}
 
-	const setupFilters = () => {
+
+	const setupEffects = () => {
 		const defs = d3.select("#drawingArea").append('defs').attr("id", "defs");
 		const setupDropShadowFilter = (defs) => {
 			// append filter element
@@ -883,54 +1216,39 @@
 			const feMerge = filter.append('feMerge');
 
 			// first layer result of blur and offset
-			feMerge.append('feMergeNode')
+			feMerge.append('feMergeItem')
 				.attr('in", "offsetBlur')
 
 			// original image on top
-			feMerge.append('feMergeNode')
+			feMerge.append('feMergeItem')
 				.attr('in', 'SourceGraphic');
 		}
 		setupDropShadowFilter(defs);
 	}
-	const setupInputEventHandlers = (simulation) => {
-		const searchInput = document.getElementById("searchInput");
-		searchInput.addEventListener("keyup", event => {
+	const setupRadialGradientFilter = (id, colour) => {
+		const defs = d3.select("#defs");
+		// append gaussian blur to filter
+		const radialGradient = defs.append('radialGradient')
+			.attr('id', id) /// !!! important - define id to reference it later
+			.attr('fx', '0.5')
+			.attr('fy', "0.5") // !!! important parameter - blur
+			.attr('r', '1');
+		radialGradient.append("stop")
+			.attr("stop-opacity", "1")
+			.attr("offset", "0%")
+			.attr("stop-colour", colour);
+		radialGradient.append("stop")
+			.attr("stop-opacity", "0")
+			.attr("offset", "60%")
+			.attr("stop-colour", "#ffffff");
 
-			console.log("change!" + event.currentTarget.value);
-			d3.select("#drawingArea").selectAll(".node").data(nodes)
-				.style("opacity", 1)
-			d3.select("#drawingArea").selectAll(".node").data(nodes).filter(node => node.identifier.toLowerCase().indexOf(event.currentTarget.value.toLowerCase()) < 0)
-				.style("opacity", 0.05)
 
-			d3.select("#drawingArea").selectAll(".path").data(unsortedLinks)
-				.style("opacity", 1)
-			d3.select("#drawingArea").selectAll(".path").data(unsortedLinks).filter(item => {
-				//console.log((node.identifier != null) && (node.identifier.toLowerCase().indexOf(event.currentTarget.value.toLowerCase()) < 0))
-				let notFound = true;
-				if (item.identifier != null) {
-					notFound = (item.identifier.toLowerCase().indexOf(event.currentTarget.value.toLowerCase()) < 0);
-				}
-				return notFound;
-			})
-				.style("opacity", 0.05);
-
-			// d3.select("#drawingArea").selectAll(".text").data(nodes)
-			// 	.style("opacity", 1)
-			// d3.select("#drawingArea").selectAll(".text").data(unsortedLinks).filter(item => {
-			// 	//console.log((node.identifier != null) && (node.identifier.toLowerCase().indexOf(event.currentTarget.value.toLowerCase()) < 0))
-			// 	let notFound = true;
-			// 	if (item.identifier != null) {
-			// 		notFound = (item.identifier.toLowerCase().indexOf(event.currentTarget.value.toLowerCase()) < 0);
-			// 	}
-			// 	return notFound;
-			// })
-			// 	.style("opacity", 0.05)
-		})
 	}
-
-	const simulation = setupSimulation(innerWidth, innerHeight);
-	setupInputEventHandlers(simulation);
-	setupFilters();
-	update(simulation, nodes, unsortedLinks, connectors, nodeTypes, displayOptions);
-	createActionsMenu();
+	simulation = setupSimulation(innerWidth, innerHeight);
+	// setupInputEventHandlers(simulation);
+	setupEffects();
+	setupInputEventHandlers();
+	setupFilterDefaults();
+	update(simulation, items, unmappedLinks, linkTypes, itemTypes, displayOptions);
+	createActionsMenu(simulation, items, unmappedLinks, linkTypes, itemTypes, displayOptions);
 })();

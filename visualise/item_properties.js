@@ -26,7 +26,7 @@ const setupItemPropertiesModal = () => {
 							<div class="form-group">
 								<label for="itemIdentifierInput">Identifier</label>
 								<input class="form-control" id="itemIdentifierInput" placeholder="Enter identifier&hellip;"></input>
-								<small id="itemIdentifierHelp" class="form-text text-muted">The bale associated with this item.</small>
+								<small id="itemIdentifierHelp" class="form-text text-muted">The label associated with this item.</small>
 							</div>
 							<div class="form-group">
 								<label for="itemDescriptionInput">Description</label>
@@ -94,7 +94,7 @@ const setupItemPropertiesModal = () => {
  * @param {item} item The data of the item to display to the user.
  * @param {function} saveCallback Function to invoke when the user requests to save.
 */
-const viewItem = (item, parentItem, saveCallback, nodes, links, linkTypes, itemTypes) => {
+const viewItem = (item, parentItem, saveCallback, nodes, links, linkTypes, itemTypes, displayOptions) => {
 
 	delete document.getElementById("itemModal").dataset.internal_id;
 
@@ -189,58 +189,60 @@ const viewItem = (item, parentItem, saveCallback, nodes, links, linkTypes, itemT
 		document.getElementById("itemImage").src = "data:image/png;base64, " + btoa(item.custom_image);
 	}
 
-	// Get all the links to this item. Use these links to get items one hop from the current node.
-	const itemLinks = links.filter(link => (link.source.internal_id == item.internal_id) || (link.target.internal_id == item.internal_id));
-
-	const linkedItems = itemLinks.map(link => {
-		let foundItem = null;
-		// Get the other end of the link as these ends are what should be displayed to the user.
-		if (link.source.internal_id == item.internal_id) {
-			foundItem = link.target;
+	if (item != null) {
+		// Get all the links to this item. Use these links to get items one hop from the current node.
+		const itemLinks = links.filter(link => (link.source != null) && (link.target != null) && ((link.source.internal_id == item.internal_id) || (link.target.internal_id == item.internal_id)));
+		const linkedItems = itemLinks.map(link => {
+			let foundItem = null;
+			// Get the other end of the link as these ends are what should be displayed to the user.
+			if (link.source.internal_id == item.internal_id) {
+				foundItem = link.target;
+			}
+			else if (link.target.internal_id == item.internal_id) {
+				foundItem = link.source;
+			}
+			else {
+				console.log("Error!");
+			}
+			return foundItem;
+		});
+		console.log("linkedItems = " + linkedItems.length);
+		const itemsRow = d3.select("#linkContainer").append("tr");
+		const itemCells = itemsRow.selectAll("td")
+			.data(linkedItems)
+			.join("td")
+			.style("min-width", "200px")
+			.style("max-width", "250px")
+			.style("min-height", "200px")
+			.style("max-height", "250px")
+			.style("border", "1px solid gainsboro")
+			.style("border-radius", "4px")
+			.style("text-align", "center")
+			.style("vertical-align", "top")
+		itemCells
+			.append("h5")
+			.text(d => d.identifier)
+	
+		itemCells
+			.append("div")
+			.attr("class", "")
+			.append("svg")
+			.attr("height", "100px")
+			.attr("viewBox", [0, 0, 20, 20])
+			.append("circle")
+			.attr("r", 10)
+			.attr("cx", 10)
+			.attr("cy", 10)
+			.style("fill", d => (d.background_colour ? d.background_colour : d.type.background_colour))
+	
+		const listDescriptors = itemCells
+			.append("div")
+			.style("min-height", "50px")
+			.text(d => d.description);
 		}
-		else if (link.target.internal_id == item.internal_id) {
-			foundItem = link.source;
-		}
-		else {
-			console.log("Error!");
-		}
-		return foundItem;
-	});
-	console.log("linkedItems = " + linkedItems.length);
-	const itemsRow = d3.select("#linkContainer").append("tr");
-	const itemCells = itemsRow.selectAll("td")
-		.data(linkedItems)
-		.join("td")
-		.style("min-width", "200px")
-		.style("max-width", "250px")
-		.style("min-height", "200px")
-		.style("max-height", "250px")
-		.style("border", "1px solid gainsboro")
-		.style("border-radius", "4px")
-		.style("text-align", "center")
-		.style("vertical-align", "top")
-	itemCells
-		.append("h5")
-		.text(d => d.identifier)
 
-	itemCells
-		.append("div")
-		.attr("class", "")
-		.append("svg")
-		.attr("height", "100px")
-		.attr("viewBox", [0, 0, 20, 20])
-		.append("circle")
-		.attr("r", 10)
-		.attr("cx", 10)
-		.attr("cy", 10)
-		.style("fill", d => (d.background_colour ? d.background_colour : d.type.background_colour))
 
-	const listDescriptors = itemCells
-		.append("div")
-		.style("min-height", "50px")
-		.text(d => d.description);
-
-	}
+}
 
 const saveItem = (saveCallback, parentNode, nodes, links, linkTypes, itemTypes) => {
 	// Get all the input elements from the modal dialog.

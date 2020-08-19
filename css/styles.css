@@ -205,7 +205,7 @@
 	height: 200px !important;
   }
   
-  .modal {
+  /* .modal {
 	padding: 0 !important;
   }
   .modal .modal-dialog {
@@ -221,7 +221,7 @@
   }
   .modal .modal-body {
 	overflow-y: auto;
-  }
+  } */
   /* .linkedItems {
 	  border: gainsboro 1px solid;
 	  min-height: 100px;

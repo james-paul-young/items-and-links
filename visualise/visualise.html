@@ -49,34 +49,34 @@
 					</li>
 				</ul>
 				<form class="form-inline my-2 my-lg-0">
-					<input class="form-control mr-sm-2" type="text" placeholder="Search" id="searchInput">
+					<input class="form-control mr-sm-2" type="text" placeholder="Search&hellip;" id="searchInput">
 					<button class="btn btn-secondary my-2 my-sm-0" type="submit">Search</button>
 				</form>
 			</div>
 		</nav>
 	</header>
 	<main>
-	<!-- Page content -->
-	<div id="chart" style="position: relative;"></div>
-	<!-- <div class="chartOptions btn-group" role="group">
-    <button id="chartOptionsButton" class="btn btn-primary" data-toggle="modal" data-target="#chartOptionsModal"><span
-        id="optionsButtonText"></span></button>
-    <button id="printButton" class="btn btn-primary">Print&hellip;</button>
-    <button type="button" class="btn btn-primary" id="exportButton"><i class="fa fa-plus"></i>
-      Export</button>
-    <button type="button" class="btn btn-primary" id="importButton"><i class="fa fa-plus"></i>
-      Import</button>
-  </div> -->
-</main>
-<footer>
-</footer>
+		<!-- Page content -->
+		<div id="chart" style="position: relative;"></div>
+	</main>
+	<footer class="text-center text-light bg-dark">
+		<label for="predefinedfilters">Filter</label>
+		<select class="custom-select w-25" id="predefinedfilters" style="margin: 10px;">
+			<option></option>
+		</select>
+	<label id="info" class="col-form-label"></label>
+
+	</footer>
+	<script src="./common.js"></script>
 	<script src="./visualise3.js"></script>
 	<script src="./item_model.js"></script>
 	<script src="./link_model.js"></script>
 	<script src="./linkType_model.js"></script>
 	<script src="./itemType_model.js"></script>
+	<script src="./filter_model.js"></script>
 	<script src="./item_properties.js"></script>
 	<script src="./link_properties.js"></script>
+	<script src="./filter_properties2.js"></script>
 </body>
 
 </html>
