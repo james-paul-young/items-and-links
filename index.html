@@ -3,72 +3,99 @@
 <html lang="en">
 
 <head>
-  <meta charset="utf-8">
+	<meta charset="utf-8">
 
-  <link rel="stylesheet" href="css/styles.css">
+	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootswatch/4.3.1/sandstone/bootstrap.min.css">
+	<link rel="stylesheet" href="css/styles.css">
+	<script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+	<script src='http://d3js.org/d3.v5.min.js'></script>
+	<style>
+		th {
+			background: white;
+			position: sticky;
+			top: 0px;
+			/* Don't forget this, required for the stickiness */
+			box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.4);
+		}
 
-  <!-- <link rel="stylesheet" href="css/all.css">
-  <link rel="stylesheet" href="css/bootstrap.min.css">
-  <script src="js/jquery-3.4.1.min.js"></script>
-  <script src="js/bootstrap.min.js"></script>
-  <script src='js/d3.v5.min.js'></script> -->
-
-  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootswatch/4.3.1/sandstone/bootstrap.min.css">
-  <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
-  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
-  <script src='http://d3js.org/d3.v5.min.js'></script>
-
+		table {
+			text-align: left;
+			position: relative;
+			border-collapse: collapse;
+		}
+	</style>
+	<title>Items and Links - Projects</title>
 </head>
 
 <body>
-  <div class="main">
-    <div class="table-title">
-      <div class="table-title">
-        <h2><span id="pageTitle"></span></h2>
-    </div>
-</div>
-    <div class="form-group">
-        <button type="button" class="btn btn-secondary" id="createProjectButton" data-toggle="modal"
-          data-target="#projectModal">New Project</button>
-          <button type="button" class="btn btn-secondary" id="importButton">Import</button>
-          <button type="button" class="btn btn-secondary" id="exportButton">Export</button>
-          <button type="button" class="btn btn-secondary" id="importJirasButton">Import from Jira</button>
-    </div>
-  </div>
-  <div class="form-group">
-    <table id="projectsTable" class="table table-hover"></table>
-  </div>
+	<header>
+		<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+			<a class="navbar-brand" href="#">Items and Links</a>
+			<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarColor01"
+				aria-controls="navbarColor01" aria-expanded="false" aria-label="Toggle navigation">
+				<span class="navbar-toggler-icon"></span>
+			</button>
 
-  <script src="js/common.js"></script>
-  <script src="js/viewmodel.js"></script>
-
-  <script src="js/application_resources.js"></script>
-  <script src="js/application_view.js"></script>
-
-  <script src="type/type_resources.js"></script>
-  <script src="type/type_model.js"></script>
-  <script src="type/type_viewmodel.js"></script>
-
-  <script src="connector/connector_resources.js"></script>
-  <script src="connector/connector_model.js"></script>
-  <script src="connector/connector_viewmodel.js"></script>
-
-  <script src="thing/thing_resources.js"></script>
-  <script src="thing/thing_model.js"></script>
-  <script src="thing/thing_viewmodel.js"></script>
-  <script src="thing/thing_properties.js"></script>
-
-  <script src="connection/connection_resources.js"></script>
-  <script src="connection/connection_model.js"></script>
-  <script src="connection/connection_viewmodel.js"></script>
-  <script src="connection/connection_properties.js"></script>
-
-  <script src="project/project_resources.js"></script>
-  <script src="project/project_model.js"></script>
-  <script src="project/project_viewmodel.js"></script>
-  <script src="project/project_properties.js"></script>
-  <script src="project/project_view.js"></script>
-
+			<div class="collapse navbar-collapse" id="navbarColor01">
+				<ul class="navbar-nav mr-auto">
+					<li class="nav-item">
+						<a class="nav-link active" href="index.html">Home<span
+							class="sr-only">(current)</span></a>
+					</li>
+					<li class="nav-item">
+						<a class="nav-link" href="thing/thing.html">Items</a>
+					</li>
+					<li class="nav-item">
+						<a class="nav-link" href="type/type.html">Item Types</a>
+					</li>
+					<li class="nav-item">
+						<a class="nav-link" href="connector/connector.html">Link Types</a>
+					</li>
+					<li class="nav-item">
+						<a class="nav-link" href="connection/connection.html">Links</a>
+					</li>
+					<li class="nav-item">
+						<a class="nav-link" href="visualise/visualise.html">Visualisation </a>
+					</li>
+				</ul>
+				<form class="form-inline my-2 my-lg-0">
+					<input class="form-control mr-sm-2" type="text" placeholder="Search&hellip;" id="searchInput">
+					<button class="btn btn-secondary my-2 my-sm-0" type="submit">Search</button>
+				</form>
+			</div>
+		</nav>
+	</header>
+	<main style="padding-left: 10px; padding-right: 10px;">
+		<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3">
+			<h2>Projects</h2>
+			<div class="btn-toolbar mb-2 mb-md-0">
+				<div class="btn-group mr-2">
+					<button class="btn btn-sm btn-outline-secondary" id="createProjectButton">New Project</button>
+					<button class="btn btn-sm btn-outline-secondary" id="exportProjectsButton">Export list</button>
+				</div>
+			</div>
+		</div>
+		<div class="table-responsive">
+			<table id="projectsTable" class="table table-hover ">
+				<thead>
+					<tr class="red">
+						<th><a id="activeSortOrder" href="#" title="Active order">Active</a></th>
+						<th><a id="identifierSortOrder" href="#" title="Sort order">Identifier</a></th>
+						<th><a id="descriptionSortOrder" href="#" title="Sort order">Description</a></th>
+						<th><a id="updatedSortOrder" href="#" title="Sort order">Updated</a></th>
+					</tr>
+				</thead>
+				<tbody></tbody>
+			</table>
+		</div>
+	</main>
+	<footer class="text-center text-light bg-dark" style="position: fixed; bottom: 0px; width: 100%;">
+		<label id="info" class="col-form-label"></label>
+	</footer>
+	<script src="models.js"></script>
+	<script src="views.js"></script>
+	<script src="properties.js"></script>
 </body>
 
 </html>

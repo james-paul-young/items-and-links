@@ -608,12 +608,12 @@
 		const expandedItemRadius = displayOptions.itemRadius * 2;
 		const arc1 = d3.arc()
 			.innerRadius(0)
-			.outerRadius(expandedItemRadius + 30)
+			.outerRadius(expandedItemRadius + 40)
 			.cornerRadius(1);
 
 		const arc2 = d3.arc()
 			.innerRadius(expandedItemRadius + 5)
-			.outerRadius(expandedItemRadius + 25)
+			.outerRadius(expandedItemRadius + 30)
 			.cornerRadius(1);
 		const svg = d3.select("#drawingArea");
 
