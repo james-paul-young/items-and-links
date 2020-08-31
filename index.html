@@ -5,6 +5,7 @@
 <head>
 	<meta charset="utf-8">
 
+	<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css">
 	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootswatch/4.3.1/sandstone/bootstrap.min.css">
 	<link rel="stylesheet" href="css/styles.css">
 	<script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
@@ -31,66 +32,178 @@
 <body>
 	<header>
 		<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-			<a class="navbar-brand" href="#">Items and Links</a>
-			<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarColor01"
-				aria-controls="navbarColor01" aria-expanded="false" aria-label="Toggle navigation">
-				<span class="navbar-toggler-icon"></span>
-			</button>
-
-			<div class="collapse navbar-collapse" id="navbarColor01">
-				<ul class="navbar-nav mr-auto">
-					<li class="nav-item">
-						<a class="nav-link active" href="index.html">Home<span
-							class="sr-only">(current)</span></a>
-					</li>
-					<li class="nav-item">
-						<a class="nav-link" href="thing/thing.html">Items</a>
-					</li>
-					<li class="nav-item">
-						<a class="nav-link" href="type/type.html">Item Types</a>
-					</li>
-					<li class="nav-item">
-						<a class="nav-link" href="connector/connector.html">Link Types</a>
-					</li>
-					<li class="nav-item">
-						<a class="nav-link" href="connection/connection.html">Links</a>
-					</li>
-					<li class="nav-item">
-						<a class="nav-link" href="visualise/visualise.html">Visualisation </a>
-					</li>
-				</ul>
-				<form class="form-inline my-2 my-lg-0">
-					<input class="form-control mr-sm-2" type="text" placeholder="Search&hellip;" id="searchInput">
-					<button class="btn btn-secondary my-2 my-sm-0" type="submit">Search</button>
-				</form>
-			</div>
+			<!-- Nav tabs -->
+			<ul class="nav navbar-nav mr-auto" id="myTab" role="tablist">
+				<li class="nav-item">
+					<a class="nav-link active" id="projects-tab" data-toggle="tab" href="#projects" role="tab"
+						aria-controls="home" aria-selected="true">Home</a>
+				</li>
+				<li class="nav-item">
+					<a class="nav-link" id="items-tab" data-toggle="tab" href="#items" role="tab" aria-controls="items"
+						aria-selected="false">Items</a>
+				</li>
+				<li class="nav-item">
+					<a class="nav-link" id="item-types-tab" data-toggle="tab" href="#item-types" role="tab"
+						aria-controls="item-types" aria-selected="false">Item Types</a>
+				</li>
+				<li class="nav-item">
+					<a class="nav-link" id="link-types-tab" data-toggle="tab" href="#link-types" role="tab"
+						aria-controls="link-types" aria-selected="false">Link Types</a>
+				</li>
+				<li class="nav-item">
+					<a class="nav-link" id="links-tab" data-toggle="tab" href="#links" role="tab" aria-controls="links"
+						aria-selected="false">Links</a>
+				</li>
+				<li class="nav-item">
+					<a class="nav-link" id="visualise-tab" data-toggle="tab" href="#visualise" role="tab"
+						aria-controls="visualise" aria-selected="false">Visualise</a>
+				</li>
+			</ul>
+			<form class="form-inline my-2 my-lg-0">
+				<input class="form-control mr-sm-2" type="text" placeholder="Search&hellip;" id="searchInput">
+				<button class="btn btn-secondary my-2 my-sm-0" type="submit">Search</button>
+			</form>
 		</nav>
 	</header>
 	<main style="padding-left: 10px; padding-right: 10px;">
-		<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3">
-			<h2>Projects</h2>
-			<div class="btn-toolbar mb-2 mb-md-0">
-				<div class="btn-group mr-2">
-					<button class="btn btn-sm btn-outline-secondary" id="createProjectButton">New Project</button>
-					<button class="btn btn-sm btn-outline-secondary" id="exportProjectsButton">Export list</button>
+		<!-- Tab panes -->
+		<div class="tab-content">
+			<div class="tab-pane active" id="projects" role="tabpanel" aria-labelledby="projects-tab">
+				<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3">
+					<h2>Projects</h2>
+					<div class="btn-toolbar mb-2 mb-md-0">
+						<div class="btn-group mr-2">
+							<button class="btn btn-sm btn-outline-secondary" id="createProjectButton">New
+								Project</button>
+							<button class="btn btn-sm btn-outline-secondary" id="exportProjectsButton">Export
+								list</button>
+						</div>
+					</div>
+				</div>
+				<div class="table-responsive">
+					<table id="projectsTable" class="table table-hover ">
+						<thead>
+							<tr class="red">
+								<th><a id="project-active-sort-order" href="#" title="Active order">Active</a></th>
+								<th><a id="project-identifier-sort-order" href="#" title="Sort order">Identifier</a>
+								</th>
+								<th><a id="project-description-sort-order" href="#" title="Sort order">Description</a>
+								</th>
+								<th><a id="project-updated-sort-order" href="#" title="Sort order">Updated</a></th>
+							</tr>
+						</thead>
+						<tbody></tbody>
+					</table>
 				</div>
 			</div>
-		</div>
-		<div class="table-responsive">
-			<table id="projectsTable" class="table table-hover ">
-				<thead>
-					<tr class="red">
-						<th><a id="activeSortOrder" href="#" title="Active order">Active</a></th>
-						<th><a id="identifierSortOrder" href="#" title="Sort order">Identifier</a></th>
-						<th><a id="descriptionSortOrder" href="#" title="Sort order">Description</a></th>
-						<th><a id="updatedSortOrder" href="#" title="Sort order">Updated</a></th>
-					</tr>
-				</thead>
-				<tbody></tbody>
-			</table>
+			<div class="tab-pane" id="items" role="tabpanel" aria-labelledby="items-tab">
+				<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3">
+					<h2>Items (<label id="items-active-project"></label>)</h2>
+					<div class="btn-toolbar mb-2 mb-md-0">
+						<div class="btn-group mr-2">
+							<button class="btn btn-sm btn-outline-secondary" id="createItemButton"
+								title="Create a new item (F2) ">New Item</button>
+							<button class="btn btn-sm btn-outline-secondary" id="exportItemsButton">Export
+								list</button>
+						</div>
+					</div>
+				</div>
+				<table id="items-table" class="table table-hover">
+					<thead>
+						<tr>
+							<th><a id="item-type-sort-order" href="#" title="Sort order">Type</a></th>
+							<th><a id="item-identifier-sort-order" href="#" title="Sort order">Identifier</a></th>
+							<th><a id="item-description-sort-order" href="#" title="Sort order">Description</a></th>
+							<th><a id="item-updated-sort-order" href="#" title="Sort order">Updated</a></th>
+						</tr>
+					</thead>
+					<tbody></tbody>
+				</table>
+			</div>
+			<div class="tab-pane" id="item-types" role="tabpanel" aria-labelledby="item-types-tab">
+				<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3">
+					<h2>Item Types (<label id="item-types-active-project"></label>)</h2>
+					<div class="btn-toolbar mb-2 mb-md-0">
+						<div class="btn-group mr-2">
+							<button class="btn btn-sm btn-outline-secondary" id="create-item-type"
+								title="Create a new Item Type (F2) ">New Item Type</button>
+							<button class="btn btn-sm btn-outline-secondary" id="export-item-types">Export
+								list</button>
+						</div>
+					</div>
+				</div>
+				<table id="item-types-table" class="table table-hover">
+					<thead>
+						<tr>
+							<th><a id="item-type-identifier-sort-order" href="#" title="Sort order">Identifier</a></th>
+							<th><a id="item-type-description-sort-order" href="#" title="Sort order">Description</a>
+							</th>
+							<th><a id="item-type-updated-sort-order" href="#" title="Sort order">Updated</a></th>
+						</tr>
+					</thead>
+					<tbody></tbody>
+				</table>
+			</div>
+			<div class="tab-pane" id="links" role="tabpanel" aria-labelledby="links-tab">
+				<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3">
+					<h2>Links (<label id="links-active-project"></label>)</h2>
+					<div class="btn-toolbar mb-2 mb-md-0">
+						<div class="btn-group mr-2">
+							<button class="btn btn-sm btn-outline-secondary" id="create-link"
+								title="Create a new Link (F2) ">New Link</button>
+							<button class="btn btn-sm btn-outline-secondary" id="export-links">Export
+								list</button>
+						</div>
+					</div>
+				</div>
+				<table id="links-table" class="table table-hover">
+					<thead>
+						<tr>
+							<th><a id="link-identifier-sort-order" href="#" title="Sort order">Identifier</a></th>
+							<th><a id="link-description-sort-order" href="#" title="Sort order">Description</a></th>
+							<th><a id="link-source-sort-order" href="#" title="Sort order">Source</a></th>
+							<th><a id="link-type-sort-order" href="#" title="Sort order">Type</a></th>
+							<th><a id="link-target-sort-order" href="#" title="Sort order">Target</a></th>
+							<th><a id="link-updated-sort-order" href="#" title="Sort order">Updated</a></th>
+						</tr>
+					</thead>
+					<tbody></tbody>
+				</table>
+			</div>
+			<div class="tab-pane" id="link-types" role="tabpanel" aria-labelledby="link-types-tab">
+				<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3">
+					<h2>Link Types (<label id="link-types-active-project"></label>)</h2>
+					<div class="btn-toolbar mb-2 mb-md-0">
+						<div class="btn-group mr-2">
+							<button class="btn btn-sm btn-outline-secondary" id="create-link-type"
+								title="Create a new Link Type (F2) ">New Item Type</button>
+							<button class="btn btn-sm btn-outline-secondary" id="export-link-types">Export
+								list</button>
+						</div>
+					</div>
+				</div>
+				<table id="link-types-table" class="table table-hover">
+					<thead>
+						<tr>
+							<th><a id="link-type-identifier-sort-order" href="#" title="Sort order">Identifier</a></th>
+							<th><a id="link-type-description-sort-order" href="#" title="Sort order">Description</a>
+							</th>
+							<th><a id="link-type-updated-sort-order" href="#" title="Sort order">Updated</a></th>
+						</tr>
+					</thead>
+					<tbody></tbody>
+				</table>
+			</div>
+			<div class="tab-pane" id="visualise" role="tabpanel" aria-labelledby="visualise-tab">
+				<div id="chart" style="position: relative;"></div>
+			</div>
 		</div>
 	</main>
 	<footer class="text-center text-light bg-dark" style="position: fixed; bottom: 0px; width: 100%;">
+		<label for="predefinedfilters">Filter</label>
+		<select class="custom-select w-25" id="predefinedfilters" style="margin: 10px;">
+			<option></option>
+		</select>
 		<label id="info" class="col-form-label"></label>
 	</footer>
 	<script src="models.js"></script>
