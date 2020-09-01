@@ -614,7 +614,7 @@ const linkTypesDB = {
 			const openDBRequest = indexedDB.open("thingdb", 9);
 			openDBRequest.onsuccess = (event) => {
 				const db = event.target.result;
-				const saveTransaction = db.transaction(["connection"], "readwrite");
+				const saveTransaction = db.transaction(["connector"], "readwrite");
 				// Do something when all the data is added to the database.
 				saveTransaction.oncomplete = (event) => {
 					console.log("linkType written!");
@@ -622,17 +622,17 @@ const linkTypesDB = {
 				saveTransaction.onerror = (event) => {
 					console.error("linkType error: " + event);
 				};
-				const objectStore = saveTransaction.objectStore("connection");
+				const objectStore = saveTransaction.objectStore("connector");
 				let saveRequest = null;
 				// Only save what is needed in the db. d3 adds a lot of unneccesary attributes for thedb.
 				const linkTypeToSave = {
 					internal_id: linkType.internal_id,
 					identifier: linkType.identifier,
 					description: linkType.description,
-					connector: linkType.connector ? linkType.connector.internal_id : null,
 					project_id: linkType.project_id,
-					source: linkType.source.internal_id,
-					target: linkType.target.internal_id,
+					marker: linkType.marker,
+					dash: linkType.dash,
+					colour: linkType.colour,
 					created: linkType.created,
 					updated: linkType.updated,
 				};
@@ -675,7 +675,7 @@ const linkTypesDB = {
 			const openDBRequest = indexedDB.open("thingdb", 9);
 			openDBRequest.onsuccess = (event) => {
 				const db = event.target.result;
-				const deleteTransaction = db.transaction(["connection"], "readwrite");
+				const deleteTransaction = db.transaction(["connector"], "readwrite");
 				deleteTransaction.oncomplete = (event) => {
 					console.log("linkType deleted!");
 				};
@@ -683,7 +683,7 @@ const linkTypesDB = {
 					console.error("error: " + event);
 				};
 
-				const itemObjectStore = deleteTransaction.objectStore("connection");
+				const itemObjectStore = deleteTransaction.objectStore("connector");
 				const deleteRequest = itemObjectStore.delete(linkTypeId);
 				deleteRequest.onsuccess = (event) => {
 					console.log("deleted");

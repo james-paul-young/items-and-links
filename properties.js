@@ -124,6 +124,7 @@ const projectProperties = {
 		}
 	}
 }
+
 const itemProperties = {
 	setup: () => {
 		const modal = document.createElement("div");
@@ -419,6 +420,7 @@ const itemProperties = {
 		});
 	}
 }
+
 const itemTypeProperties = {
 	setup: () => {
 		const modal = document.createElement("div");
@@ -983,3 +985,278 @@ const linkProperties = {
 	},
 }
 
+const linkTypeProperties = {
+	dashesAndEnds: {
+		end: [
+			{ id: 0, name: 'circle', path: 'M 0, 0  m -5, 0  a 5,5 0 1,0 10,0  a 5,5 0 1,0 -10,0', viewbox: '-5 -5 10 10' }
+			, { id: 1, name: 'square', path: 'M 0,0 m -5,-5 L 5,-5 L 5,5 L -5,5 Z', viewbox: '-5 -5 10 10' }
+			, { id: 2, name: 'arrow', path: 'M 0,0 m -5,-5 L 5,0 L -5,5 Z', viewbox: '-5 -5 10 10' }
+			, { id: 3, name: 'stub', path: 'M 0,0 m -1,-5 L 1,-5 L 1,5 L -1,5 Z', viewbox: '-1 -5 2 10' }
+		],
+		dash: [
+			{ name: "short dash", on: 3, off: 3 },
+			{ name: "solid", on: 1, off: 0 },
+			{ name: "dash", on: 7, off: 7 }
+		]
+	},
+	makeid: (length) => {
+		var result = '';
+		var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+		var charactersLength = characters.length;
+		for (var i = 0; i < length; i++) {
+			result += characters.charAt(Math.floor(Math.random() * charactersLength));
+		}
+		return result;
+	},
+
+	setup: () => {
+		const modal = document.createElement("div");
+		modal.setAttribute("id", "link-type-modal");
+		modal.setAttribute("class", "modal fade");
+		modal.setAttribute("tabindex", "-1");
+		modal.setAttribute("role", "dialog");
+		modal.innerHTML = `  
+			<div class="modal-dialog modal-xl" role="document">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h3 class="modal-title" id="exampleModalLabel">Properties</h3>
+						<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+							<span aria-hidden="true">&times;</span>
+						</button>
+					</div>
+					<div class="modal-body">
+						<div class="row">
+							<div class="col-sm-6">
+							<h4 class="modal-title" id="exampleModalLabel">Details</h4>
+								<div class="form-group">
+									<label for="link-type-identifier">Identifier</label>
+									<input class="form-control" id="link-type-identifier" placeholder="Enter identifier&hellip;"></input>
+									<small id="link-type-identifier-help" class="form-text text-muted">The label associated with this Link Type.</small>
+								</div>
+								<div class="form-group">
+									<label for="link-type-description">Description</label>
+									<textarea class="form-control" id="link-type-description" placeholder="Enter description here&hellip;" rows="3"></textarea>
+									<small id="link-type-description-help" class="form-text text-muted">The description of this Link Type.</small>
+								</div>
+								<div class="form-group">
+									<label for="link-type-created">Created</label>
+									<input class="form-control" id="link-type-created" readonly></input>
+									<small id="link-type-created-help" class="form-text text-muted">Date when Link Type was created.</small>
+								</div>
+								<div class="form-group">
+									<label for="link-type-updated">Updated</label>
+									<input class="form-control" id="link-type-updated" readonly></input>
+									<small id="link-type-updated-help" class="form-text text-muted">Date when Link Type was updated.</small>
+								</div>
+							</div>
+							<div class="col-sm-6">
+								<h4 class="modal-title">Appearance</h4>
+								<div class="form-group">
+									<label for="link-type-border-colour">Colour</label>
+									<input id="link-type-border-colour" class="form-control " type="color" placeholder="Select colour&hellip;"></input>
+									<small id="link-type-border-colour-help" class="form-text text-muted">The colour to use for this Link Type when visualising.</small>
+								</div>
+								<div class="form-group">
+									<label for="connectorMarkerInput">Style</label>
+									<ul id="connectorMarkerInput" class="border rounded connectorsInput" style="height: 270px; max-height: 270px; overflow-y:scroll;">
+									</ul>
+									<small id="link-type-style-help" class="form-text text-muted">A visualisation of the link type.</small>
+								</div>
+							</div>
+						</div>
+						<div class="row">
+							<div class="col">
+							</div>
+						</div>
+						<div class="modal-footer">
+						<button id="link-type-delete" class="btn btn-primary" data-dismiss="modal">Delete</button>
+						<button id="link-type-save" class="btn btn-success" data-dismiss="modal">Save</button>
+						<button id="link-type-cancel" class="btn btn-danger" data-dismiss="modal">Cancel</button>
+						</div>
+					</div>
+				</div>
+			</div>
+		`;
+		return modal;
+
+	},
+	createMarkerEnd: (id, colour, markerEnd, width, height, refX, refY) => {
+		const svg = d3.select("#" + id);
+
+		const defs = svg.append("defs");
+		//const defs = d3.select("defs");
+			const end = linkTypeProperties.dashesAndEnds.end.find(currentEnd => currentEnd.name == markerEnd)
+			defs
+				.append('marker')
+				.attr('markerUnits', 'strokeWidth')
+				.attr('orient', 'auto')
+				.attr('id', "linkType_" + id)
+				.attr('markerHeight', height + "px")
+				.attr('markerWidth', width + "px")
+				.attr('refX', refX) // 19
+				.attr('refY', refY) // 0
+				.attr('viewBox', end.viewbox)
+				.append('path')
+				.attr('d', end.path)
+				.attr('fill', colour);
+	},
+
+	createLineAndMarker: (id, colour, markerEnd, width, height, dashType) => {
+		const svgWidth = width;
+		const svgHeight = height;
+		const strokeWidth = 2;
+		const svg = d3.select("#" + id);
+
+		svg.selectAll('line')
+			.data([dashType])
+			.enter()
+			.append('line')
+			.attr('x1', d => strokeWidth + 1)
+			.attr('y1', Math.floor(svgHeight / 2))
+			.attr('x2', d => svgWidth - strokeWidth - 2)
+			.attr('y2', Math.floor(svgHeight / 2))
+			.attr('stroke', colour)
+			.attr('stroke-width', strokeWidth)
+			.attr('stroke-linecap', 'round')
+			.attr("stroke-dasharray", d => {
+				const dash = linkProperties.dashesAndEnds.dash.find(dash => d == dash.name);
+				return dash.on + " " + dash.off;
+			})
+			.attr('marker-end', 'url(#linkType_' + id + ")")
+			.each(d => {
+				linkTypeProperties.createMarkerEnd(id, colour, markerEnd, 5, 5, 0, 0);
+			})
+
+	},
+	/**
+ * 
+ * @param {string} inputId ID of the list UI element
+ * @param {string} colour Colour value to use for each connector line
+ * @param {*} dashName The name of the dash to be selected (in combination with the marker name)
+ * @param {*} markerName The name of the marker to be selected (in combination with the dash name)
+ */
+	drawDashesAndMarkersSelect: (inputId, colour, dashName, markerName) => {
+		console.assert(inputId != "", "No input Id to identify \"list\" element.");
+		let selectedConnectorListItem = null;
+		const listContainer = document.getElementById(inputId)
+
+		// Clear out any content in the list before adding all the connectors.
+		listContainer.innerHTML = "";
+		// Loop through the dashes and markers to create a candidate line for a connector.
+		linkTypeProperties.dashesAndEnds.dash.forEach(dashItem => {
+			linkTypeProperties.dashesAndEnds.end.forEach(markerItem => {
+				// Create the list item for containing the candidate line.
+				const connectorListItem = document.createElement("li");
+				connectorListItem.setAttribute("class", "d-flex justify-content-between align-items-center connectorListItem");
+				// // Set the id so the svg can be added to this element below.
+				// connectorListItem.id = "connector-" + markerItem.name + "-" + dashItem.name;
+				connectorListItem.dataset.marker = markerItem.name;
+				connectorListItem.dataset.dash = dashItem.name;
+				// See if the current candidate line should be marked as "selected" based on parameters passed to this function.
+				if ((dashItem.name == dashName) && (markerItem.name == markerName)) {
+					selectedConnectorListItem = connectorListItem;
+					connectorListItem.classList.add("connectorListSelectedItem");
+				}
+				// Add a "click" listener to handle the current item being "selected" as the candidate line.
+				connectorListItem.addEventListener("click", (event) => {
+					const allconnectorListItems = document.querySelectorAll(".connectorListItem");
+					// Clear the selection indicators of all other candidate lines.
+					[...allconnectorListItems].forEach(connectorListItem => {
+						connectorListItem.classList.remove("connectorListSelectedItem");
+					});
+					// Set the selection indicator for the current candidate line.
+					event.currentTarget.classList.toggle("connectorListSelectedItem");
+				});
+				// Create the container for the candidate line
+				const connectorListItemDiv = document.createElement("div");
+				// Give the container a random id to uniquely identify it among other containers. Used when adding SVG.
+				connectorListItemDiv.id = linkTypeProperties.makeid(50);
+				//connectorListItemDiv.width = "100px";
+				connectorListItem.appendChild(connectorListItemDiv);
+
+				// Add the container to the list.
+				listContainer.appendChild(connectorListItem);
+
+				const svg = d3.select("#" + connectorListItemDiv.id).append('svg')
+					.attr('width', connectorListItemDiv.width)
+					.attr('height', "20")
+					.attr("id", "svg_" + connectorListItemDiv.id);
+				linkTypeProperties.createLineAndMarker(svg.attr("id"), colour, markerItem.name, 100, 20, dashItem.name);
+			});
+			if (selectedConnectorListItem != null) {
+				selectedConnectorListItem.scrollIntoView();
+			}
+
+		});
+
+	},
+
+	/**
+	* @param {string} defaultFillColour The colour to display as a default selection for a link without a fill colour.
+	* @param {link} link The data of the link to display to the user.
+	* @param {function} saveCallback Function to invoke when the user requests to save.
+   */
+	view: (linkType, parentLink, saveCallback, nodes, links, linkTypes, itemTypes, displayOptions, deleteCallback) => {
+		delete document.getElementById("link-type-modal").dataset.internal_id;
+
+		// Set up all the links to the HTML buttons.
+		const saveButton = document.getElementById("link-type-save");
+		saveButton.addEventListener("click", event => {
+			if (saveCallback != null) {
+				linkTypeProperties.save(saveCallback, parentLink, nodes, links, linkTypes, linkTypes);
+			}
+		});
+
+		const deleteButton = document.getElementById("link-type-delete");
+		deleteButton.addEventListener("click", event => {
+			if (deleteCallback != null) {
+				deleteCallback();
+			}
+		});
+
+		const colorInput = document.getElementById("link-type-border-colour");
+		colorInput.addEventListener("change", event => {
+			linkTypeProperties.drawDashesAndMarkersSelect("connectorMarkerInput", event.currentTarget.value, linkType.dash, linkType.marker);
+		});
+		const cancelButton = document.getElementById("link-type-cancel");
+		cancelButton.addEventListener("click", event => {
+		});
+		if (linkType != null) {
+			document.getElementById("link-type-modal").dataset.internal_id = linkType.internal_id;
+		}
+		document.getElementById("link-type-identifier").value = (linkType == null) ? "" : linkType.identifier;
+		document.getElementById("link-type-description").value = (linkType == null) ? "" : linkType.description;
+		document.getElementById("link-type-border-colour").value = (linkType == null) ? "" : ("" + linkType.colour);
+
+		document.getElementById("link-type-created").value = (linkType == null) ? "" : linkType.created;
+		document.getElementById("link-type-updated").value = (linkType == null) ? "" : linkType.updated;
+
+		linkTypeProperties.drawDashesAndMarkersSelect("connectorMarkerInput", (linkType == null)? "black" : linkType.colour, (linkType == null)? "" : linkType.dash, (linkType == null)? "" : linkType.marker);
+		
+		//$('#link-type-identifier').focus()
+		//document.getElementById("link-type-identifier").focus();
+	},
+	save: (saveCallback, parentNode, nodes, links, linkTypes, itemTypes) => {
+		// Get all the input elements from the modal dialog.
+		const linkinternal_id = document.getElementById("link-type-modal").dataset.internal_id;
+		const linkIdentifierInput = document.getElementById("link-type-identifier");
+		const linkDescriptionInput = document.getElementById("link-type-description");
+		const linkBorderColourInput = document.getElementById("link-type-border-colour");
+
+		const allconnectorListItems = document.querySelectorAll(".connectorListSelectedItem");
+		// Should only be one connector selected...
+		const marker = allconnectorListItems[0].dataset.marker;
+		const dash = allconnectorListItems[0].dataset.dash;
+		const saveLinkType = {
+			internal_id: linkinternal_id,
+			identifier: linkIdentifierInput.value,
+			description: linkDescriptionInput.value,
+			colour: linkBorderColourInput.value,
+			marker: marker,
+			dash: dash,
+		};
+		if (saveCallback != null) {
+			saveCallback(saveLinkType, parentNode, nodes, links, linkTypes, itemTypes);
+		}
+	}
+}

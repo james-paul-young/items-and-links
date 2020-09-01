@@ -826,11 +826,11 @@ const links = (async () => {
 				const criteria = searchInput.value.toLowerCase();
 				filter = link => {
 					return (("" + link.identifier).toLowerCase().indexOf(criteria) >= 0)
-					|| (("" + link.description).toLowerCase().indexOf(criteria) >= 0)
-					|| (("" + link.updated).toString().toLowerCase().indexOf(criteria) >= 0)
-					|| (("" + (link.type? link.type.identifier : "")).toLowerCase().indexOf(criteria) >= 0)
-					|| (("" + (link.source? link.source.identifier : "")).toLowerCase().indexOf(criteria) >= 0)
-					|| (("" + (link.target? link.target.identifier : "")).toLowerCase().indexOf(criteria) >= 0)
+						|| (("" + link.description).toLowerCase().indexOf(criteria) >= 0)
+						|| (("" + link.updated).toString().toLowerCase().indexOf(criteria) >= 0)
+						|| (("" + (link.type ? link.type.identifier : "")).toLowerCase().indexOf(criteria) >= 0)
+						|| (("" + (link.source ? link.source.identifier : "")).toLowerCase().indexOf(criteria) >= 0)
+						|| (("" + (link.target ? link.target.identifier : "")).toLowerCase().indexOf(criteria) >= 0)
 				}
 				list();
 			})
@@ -920,6 +920,64 @@ const linkTypes = (async () => {
 	let filter = null;
 	let selectedRow = null;
 
+	const dashesAndEnds = {
+		end: [
+			{ id: 0, name: 'circle', path: 'M 0, 0  m -5, 0  a 5,5 0 1,0 10,0  a 5,5 0 1,0 -10,0', viewbox: '-5 -5 10 10' }
+			, { id: 1, name: 'square', path: 'M 0,0 m -5,-5 L 5,-5 L 5,5 L -5,5 Z', viewbox: '-5 -5 10 10' }
+			, { id: 2, name: 'arrow', path: 'M 0,0 m -5,-5 L 5,0 L -5,5 Z', viewbox: '-5 -5 10 10' }
+			, { id: 3, name: 'stub', path: 'M 0,0 m -1,-5 L 1,-5 L 1,5 L -1,5 Z', viewbox: '-1 -5 2 10' }
+		],
+		dash: [
+			{ name: "short dash", on: 3, off: 3 },
+			{ name: "solid", on: 1, off: 0 },
+			{ name: "dash", on: 7, off: 7 }
+		]
+	};
+
+	const createMarkerEnd = (id, colour, markerEnd, width, height, refX, refY) => {
+		const svg = d3.select("#svg_" + id);
+
+		const defs = svg.append("defs");
+		//const defs = d3.select("defs");
+		if (document.getElementById("linkType_" + id) == null) {
+			const end = dashesAndEnds.end.find(currentEnd => currentEnd.name == markerEnd)
+			defs
+				.append('marker')
+				.attr('markerUnits', 'strokeWidth')
+				.attr('orient', 'auto')
+				.attr('id', "linkType_" + id)
+				.attr('markerHeight', height + "px")
+				.attr('markerWidth', width + "px")
+				.attr('refX', refX) // 19
+				.attr('refY', refY) // 0
+				.attr('viewBox', end.viewbox)
+				.append('path')
+				.attr('d', end.path)
+				.attr('fill', colour);
+		}
+	};
+
+	const createLineAndMarker = (id, colour, markerEnd, width, height, dashType) => {
+		const svgWidth = width;
+		const svgHeight = height;
+		const strokeWidth = 2;
+		const svg = d3.select("#svg_" + id);
+		svg
+			.append('line')
+			.attr('x1', d => strokeWidth + 1)
+			.attr('y1', Math.floor(svgHeight / 2))
+			.attr('x2', d => svgWidth - strokeWidth - 2)
+			.attr('y2', Math.floor(svgHeight / 2))
+			.attr('stroke', colour)
+			.attr('stroke-width', strokeWidth)
+			.attr('stroke-linecap', 'round')
+			.attr("stroke-dasharray", dashType.on + " " + dashType.off)
+			.attr('marker-end', 'url(#linkType_' + id + ")")
+			.each(d => {
+				createMarkerEnd(id, colour, markerEnd, 5, 5, 1, 0);
+			})
+
+	};
 	const deleteRow = (row) => {
 		linkTypesDB.delete(row.dataset.internal_id).then(result => {
 			const table = document.getElementById("link-types-table");
@@ -940,7 +998,7 @@ const linkTypes = (async () => {
 				});
 			});
 		});
-	}
+	};
 	const create = () => {
 		view(null);
 	};
@@ -1028,6 +1086,7 @@ const linkTypes = (async () => {
 	const getRowHTML = (linkType) => {
 		return `
 			<tr data-internal_id="${linkType.internal_id}" data-toggle="modal" data-target="#link-type-modal" class="item-row">
+				<td><svg id="svg_${linkType.internal_id}" style="width: 100px; height: 20px;"></svg></td>
 				<td><nobr>${linkType.identifier}</nobr></td>
 				<td>${linkType.description}</td>
 				<td>${((linkType.updated == null) ? "" : linkType.updated.toString().substring(4, linkType.updated.toString().indexOf(" G")))}</td>
@@ -1041,12 +1100,12 @@ const linkTypes = (async () => {
 				list();
 			});
 		});
-	}
-	const deleteItemType = () => {
+	};
+	const deleteLinkType = () => {
 		deleteRow(selectedRow);
-	}
+	};
 	const view = (id) => {
-		const modal = document.getElementById("item-type-modal");
+		const modal = document.getElementById("link-type-modal");
 		if (modal) {
 			document.body.removeChild(modal);
 		}
@@ -1054,7 +1113,7 @@ const linkTypes = (async () => {
 		const linkType = linkTypes.find(linkType => linkType.internal_id == id);
 		linkTypeProperties.view(linkType, null, save, items, links, linkTypes, itemTypes, null, deleteLinkType);
 		$('#link-type-modal').modal();
-	}
+	};
 
 	const curatedList = () => {
 		let sortFunction = null;
@@ -1078,7 +1137,7 @@ const linkTypes = (async () => {
 				.sort(sortFunction);
 		}
 		return linkTypesList;
-	}
+	};
 	const list = () => {
 		const curatedLinkTypesList = curatedList();
 		if (curatedLinkTypesList != null) {
@@ -1088,6 +1147,13 @@ const linkTypes = (async () => {
 			table.tBodies[0].innerHTML = html.join("");
 			var rows = Array.from(table.querySelectorAll(".item-row"));
 			rows.forEach(row => {
+				const linkType = linkTypes.find(linkType => linkType.internal_id == row.dataset.internal_id);
+				const end = dashesAndEnds.end.find(datum => datum.name == linkType.marker);
+				const dash = dashesAndEnds.dash.find(dash => dash.name == linkType.dash);
+				if ((dash != null) && (end != null)) {
+					createLineAndMarker(linkType.internal_id, linkType.colour, linkType.marker, 100, 20, dash);
+				}
+
 				row.addEventListener("click", event => {
 					view(event.currentTarget.dataset.internal_id);
 					selectedRow = event.currentTarget;
@@ -1352,7 +1418,7 @@ let visualise = (async () => {
 		}
 		// Find all links to/from this item.
 		const linksToItem = links.filter(link => {
-			return ((link.source? link.source.internal_id : "") == item.internal_id) || ((link.target? link.target.internal_id : "") == item.internal_id);
+			return ((link.source ? link.source.internal_id : "") == item.internal_id) || ((link.target ? link.target.internal_id : "") == item.internal_id);
 		});
 		// Remove those links from the general simulation links.
 		linksToItem.forEach(async linkToItem => {
@@ -2308,6 +2374,6 @@ let visualise = (async () => {
 		setupFilterDefaults();
 		update(simulation, items, unmappedLinks, linkTypes, itemTypes, displayOptions);
 		createActionsMenu(simulation, items, unmappedLinks, linkTypes, itemTypes, displayOptions);
-	
+
 	});
 })();
