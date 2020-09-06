@@ -2439,8 +2439,11 @@ let visualise = (async () => {
 
 					const xAxis = d3.axisBottom(x)
 						.tickFormat((d, i) => {
-							return (d ? linkTypesInUse.find(l => l.internal_id == d).identifier : "Unspecified");
-						})
+							const linkType = linkTypesInUse.find(linkTypeInUse => linkTypeInUse? linkTypeInUse.internal_id == d: false);
+							
+							return linkType? linkType.identifier : "Unspecified";
+						});
+
 					svg.append("g")
 						.attr("transform", "translate(0," + 100 + ")")
 						.call(xAxis);
