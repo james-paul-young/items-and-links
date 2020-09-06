@@ -55,14 +55,22 @@
 						aria-selected="false">Links</a>
 				</li>
 				<li class="nav-item">
+					<a class="nav-link" id="filters-tab" data-toggle="tab" href="#filters" role="tab" aria-controls="filters"
+						aria-selected="false">Filters</a>
+				</li>
+				<li class="nav-item">
 					<a class="nav-link" id="visualise-tab" data-toggle="tab" href="#visualise" role="tab"
 						aria-controls="visualise" aria-selected="false">Visualise</a>
 				</li>
 			</ul>
-			<form class="form-inline my-2 my-lg-0">
-				<input class="form-control mr-sm-2" type="text" placeholder="Search&hellip;" id="searchInput">
-				<button class="btn btn-secondary my-2 my-sm-0" type="submit">Search</button>
-			</form>
+			<!-- <form class="form-inline"> -->
+				<div class="input-group" style="width: 250px;" >
+					<input class="form-control"type="text" placeholder="Search&hellip;" id="searchInput">
+					<button id="search-clear" class="btn bg-transparent" style="margin-left: -40px; z-index: 100;">
+					  <i class="fa fa-times"></i>
+					</button>
+				</div>
+			<!-- </form> -->
 		</nav>
 	</header>
 	<main style="padding-left: 10px; padding-right: 10px;">
@@ -75,7 +83,9 @@
 						<div class="btn-group mr-2">
 							<button class="btn btn-sm btn-outline-secondary" id="createProjectButton">New
 								Project</button>
-							<button class="btn btn-sm btn-outline-secondary" id="exportProjectsButton">Export
+								<button class="btn btn-sm btn-outline-secondary" id="createProjectFromFileButton">New
+									Project from file</button>
+								<button class="btn btn-sm btn-outline-secondary" id="exportProjectsButton">Export
 								list</button>
 						</div>
 					</div>
@@ -195,6 +205,31 @@
 					<tbody></tbody>
 				</table>
 			</div>
+			<div class="tab-pane" id="filters" role="tabpanel" aria-labelledby="filters-tab">
+				<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-filters-center pt-3 pb-2 mb-3">
+					<h2>Filters (<label id="filters-active-project"></label>)</h2>
+					<div class="btn-toolbar mb-2 mb-md-0">
+						<div class="btn-group mr-2">
+							<button class="btn btn-sm btn-outline-secondary" id="createFilterButton"
+								title="Create a new filter (F2) ">New Filter</button>
+							<button class="btn btn-sm btn-outline-secondary" id="exportFiltersButton">Export
+								list</button>
+						</div>
+					</div>
+				</div>
+				<table id="filters-table" class="table table-hover">
+					<thead>
+						<tr>
+							<th><a id="filter-type-sort-order" href="#" title="Sort order">Type</a></th>
+							<th><a id="filter-identifier-sort-order" href="#" title="Sort order">Identifier</a></th>
+							<th><a id="filter-description-sort-order" href="#" title="Sort order">Description</a></th>
+							<th><a id="filter-updated-sort-order" href="#" title="Sort order">Updated</a></th>
+						</tr>
+					</thead>
+					<tbody></tbody>
+				</table>
+			</div>
+
 			<div class="tab-pane" id="visualise" role="tabpanel" aria-labelledby="visualise-tab">
 				<div id="chart" style="position: relative;"></div>
 			</div>

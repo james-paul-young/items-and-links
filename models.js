@@ -1,3 +1,4 @@
+"use strict";
 const projectsDB = {
 	makeid: (length) => {
 		var result = '';
@@ -49,9 +50,9 @@ const projectsDB = {
 		return new Promise((resolve, reject) => {
 			projectsDB.load().then(projects => {
 				projects.forEach(project => {
-					projectsDB.saveProjectToDB({ ...project, active: false, });
+					projectsDB.save({ ...project, active: false, });
 				});
-				projectsDB.saveProjectToDB(activeProject).then(result => {
+				projectsDB.save(activeProject).then(result => {
 					resolve();
 				});
 			});
@@ -222,6 +223,14 @@ const itemsDB = {
 				const objectStore = saveTransaction.objectStore("thing");
 				let saveRequest = null;
 				// Only save what is needed in the db. d3 adds a lot of unneccesary attributes for thedb.
+				let itemTypeInternalId = null;
+				if(typeof(item.type) == "string") {
+					itemTypeInternalId = item.type;
+				}
+				else if(link.source != null) {
+					itemTypeInternalId = item.type.internal_id;
+				}
+
 				const itemToSave = {
 					internal_id: item.internal_id,
 					identifier: item.identifier,
@@ -229,7 +238,7 @@ const itemsDB = {
 					colour: item.colour,
 					fill_colour: item.fill_colour,
 					project_id: item.project_id,
-					type: item.type.internal_id,
+					type: itemTypeInternalId,
 					custom_image: item.custom_image,
 					created: item.created,
 					updated: item.updated,
@@ -365,7 +374,8 @@ const itemTypesDB = {
 					description: itemType.description,
 					project_id: itemType.project_id,
 					colour: itemType.colour,
-					fill_colour: itemType.fill_colour,
+					background_colour: itemType.background_colour,
+					fill_colour: itemType.background_colour,
 					created: itemType.created,
 					updated: itemType.updated,
 				};
@@ -491,14 +501,36 @@ const linksDB = {
 				const objectStore = saveTransaction.objectStore("connection");
 				let saveRequest = null;
 				// Only save what is needed in the db. d3 adds a lot of unneccesary attributes for thedb.
+				let sourceInternalId = null;
+				if(typeof(link.source) == "string") {
+					sourceInternalId = link.source;
+				}
+				else if(link.source != null) {
+					sourceInternalId = link.source.internal_id;
+				}
+				let targetInternalId = null;
+				if(typeof(link.target) == "string") {
+					targetInternalId = link.target;
+				}
+				else if(link.target != null) {
+					targetInternalId = link.target.internal_id;
+				}
+
+				let connectorInternalId = null;
+				if(typeof(link.connector) == "string") {
+					connectorInternalId = link.connector;
+				}
+				else if(link.connector != null) {
+					connectorInternalId = link.connector.internal_id;
+				}
 				const linkToSave = {
 					internal_id: link.internal_id,
 					identifier: link.identifier,
 					description: link.description,
-					connector: link.connector ? link.connector.internal_id : null,
+					connector: connectorInternalId,
 					project_id: link.project_id,
-					source: link.source? link.source.internal_id : null,
-					target: link.target? link.target.internal_id : null,
+					source: sourceInternalId,
+					target: targetInternalId,
 					created: link.created,
 					updated: link.updated,
 				};
@@ -704,7 +736,7 @@ const linkTypesDB = {
 	}
 };
 
-const filterDB = {
+const filtersDB = {
 	makeid : (length) => {
 		var result = '';
 		var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
@@ -752,7 +784,7 @@ const filterDB = {
 				const saveTransaction = db.transaction(["filter"], "readwrite");
 				// Do something when all the data is added to the database.
 				saveTransaction.oncomplete = (event) => {
-					console.log("Transaction complete: item written!");
+					console.log("Transaction complete: filter written!");
 				};
 				saveTransaction.onerror = (event) => {
 					console.error("filter error: " + event);
@@ -760,28 +792,43 @@ const filterDB = {
 				const objectStore = saveTransaction.objectStore("filter");
 				let saveRequest = null;
 				// Only save what is needed in the db. d3 adds a lot of unneccesary attributes for thedb.
+				const filterToSave = {
+					internal_id: filter.internal_id,
+					identifier: filter.identifier,
+					description: filter.description,
+					included: filter.included,
+					visible: filter.visible,
+					active: filter.active,
+					project_id: filter.project_id,
+					created: filter.created,
+					updated: filter.updated,
+				};
+				// Only save what is needed in the db. d3 adds a lot of unneccesary attributes for thedb.
 				let mergedRecord = null;
 				const datetime = new Date();
 				// Check if a new record is being written. Needed for 
 				// determining which operation to use later.
-				const newRecord = ((filter.internal_id == null) || (filter.internal_id.length == 0));
+				const newRecord = ((filterToSave.internal_id == null) || (filterToSave.internal_id.length == 0));
 				if (!newRecord) {
-					filter.updated = datetime;
-					saveRequest = objectStore.put(filter);
+					filterToSave.updated = datetime;
+					saveRequest = objectStore.put(filterToSave);
+					mergedRecord = { ...filterToSave, ...filter };
 				}
 				else {
 					// Saving a new record so lets initialise some values before writing to the object store
-					filter.internal_id = itemsDB.makeid(50);
-					filter.created = datetime;
-					filter.updated = filter.created
-					saveRequest = objectStore.add(filter);
+					filterToSave.internal_id = itemsDB.makeid(50);
+					filterToSave.created = datetime;
+					filterToSave.updated = filterToSave.created;
+					saveRequest = objectStore.add(filterToSave);
+					mergedRecord = { ...filterToSave, ...filter };
+					mergedRecord.internal_id = filterToSave.internal_id;
 				}
 				saveRequest.onsuccess = (event) => {
 					console.log(newRecord ? "filter (" + objectStore.internal_id + ") added." : "Updated");
 
-					resolve(filter);
+					resolve(mergedRecord);
 				}
-				saveRequest.onerror = (event) => { console.log("filter (" + item.internal_id + ") not added."); }
+				saveRequest.onerror = (event) => { console.log("filter (" + filter.internal_id + ") not added."); }
 				saveRequest.oncomplete = (event) => {
 					db.close();
 				}
@@ -824,5 +871,30 @@ const filterDB = {
 				reject();
 			}
 		});
-	}
+	},
+	activate: activeFilter => {
+		return new Promise((resolve, reject) => {
+			filtersDB.load().then(filters => {
+				filters.forEach(filter => {
+					filter.active = true;
+					filtersDB.save(filter);
+				});
+				filtersDB.save(activeFilter).then(result => {
+					resolve();
+				});
+			});
+		});
+	},
+	getActive: projectId => {
+		return new Promise((resolve, reject) => {
+			filtersDB.load(projectId).then(filters => {
+				if (filters.length > 0) {
+					resolve(filters[0]);
+				}
+				else {
+					reject();
+				}
+			});
+		});
+	},
 }

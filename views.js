@@ -1,3 +1,22 @@
+(async () => {
+	try {
+		const activeProject = await projectsDB.getActive();
+		if (activeProject) {
+			const filters = filtersDB.load(activeProject.internal_id);
+			filters.then(result => {
+				const definedFiltersHTML = result
+					.sort((a, b) => a.identifier.localeCompare(b.identifier))
+					.map(filter => `<option title="${filter.description}" value="${filter.internal_id}">${filter.identifier}</option>`);
+				const predefinedfilters = document.getElementById("predefinedfilters");
+				predefinedfilters.innerHTML = `<option value = "">All</option>` + definedFiltersHTML.join("");
+			}, error => {
+				console.log(error);
+			});
+		}
+	}
+	catch (exception) {
+	}
+})();
 const projects = (async () => {
 	let projects = null;
 	let sortOrder = null;
@@ -5,8 +24,21 @@ const projects = (async () => {
 
 	const deleteRow = (row) => {
 		projectsDB.delete(row.dataset.internal_id).then(result => {
-			const table = document.getElementById("projectsTable");
-			table.deleteRow(row.rowIndex);
+			const projectInternalId = row.dataset.internal_id;
+			load().then(result => {
+				Promise.allSettled([linkTypesDB.load(projectInternalId), linksDB.load(projectInternalId), itemsDB.load(projectInternalId), itemTypesDB.load(projectInternalId), filtersDB.load(projectInternalId)]).then(results => {
+					results[0].value.forEach(linkType => linkTypesDB.delete(linkType.internal_id));
+					results[1].value.forEach(link => linksDB.delete(link.internal_id));
+					results[2].value.forEach(itemType => itemTypesDB.delete(itemType.internal_id));
+					results[3].value.forEach(item => itemsDB.delete(item.internal_id));
+					results[4].value.forEach(filter => filtersDB.delete(filter.internal_id));
+
+					const table = document.getElementById("projectsTable");
+					table.deleteRow(row.rowIndex);
+
+					list();
+				});
+			});
 		});
 	};
 	const load = () => {
@@ -27,11 +59,33 @@ const projects = (async () => {
 	const create = () => {
 		view(null);
 	};
+	const exportToFile = project => {
+		return new Promise((resolve, reject) => {
+			const all = {
+				linkTypes: null,
+				links: null,
+				items: null,
+				itemTypes: null
+			};
+			Promise.allSettled([linkTypesDB.load(project.internal_id), linksDB.load(project.internal_id), itemsDB.load(project.internal_id), itemTypesDB.load(project.internal_id)]).then(results => {
+				all.linkTypes = results[0].value;
+				all.links = results[1].value;
+				all.items = results[2].value;
+				all.itemTypes = results[3].value;
+				all.project = project;
+				var exportJSON = document.createElement("a");
+				var blob = new Blob([JSON.stringify(all)], { type: "text/JSON; charset=utf-8;" });
+				var url = URL.createObjectURL(blob);
+				exportJSON.href = url;
+				exportJSON.setAttribute("download", project.identifier + ".JSON");
+				exportJSON.click();
+				resolve();
+			});
+		});
+	};
 	const exportProjects = () => {
 		const mappedProjects = curatedList().map(project => {
 			const newProject = project;
-			// const type = projectTypes.find(type => type.internal_id == project.type);
-			// project.type = (type ? type.identifier : ""); '';
 			return newProject;
 		});
 
@@ -48,6 +102,29 @@ const projects = (async () => {
 		exportJSON.setAttribute("download", "projects.csv");
 		exportJSON.click();
 	};
+	const importProjectFromFile = projectJSON => {
+		const parsedJSON = JSON.parse(projectJSON);
+		const importedProject = parsedJSON.project;
+		projectsDB.save(importedProject);
+
+		const importedItems = parsedJSON.items;
+		importedItems.forEach(importedItem => itemsDB.save(importedItem));
+
+		const importedItemTypes = parsedJSON.itemTypes;
+		importedItemTypes.forEach(importedItemType => itemTypesDB.save(importedItemType));
+
+		const importedLinks = parsedJSON.links;
+		importedLinks.forEach(importedLink => linksDB.save(importedLink));
+
+		const importedLinkTypes = parsedJSON.linkTypes;
+		importedLinkTypes.forEach(importedLinkType => linkTypesDB.save(importedLinkType));
+
+		console.log(JSON.parse(projectJSON));
+		load().then(async result => {
+			await projectsDB.activate(importedProject);
+			list();
+		});
+	}
 	const setupEventHandlers = () => {
 		const tabLink = document.getElementById("projects-tab");
 		console.assert(tabLink != null, "Cannot find projects-tab");
@@ -63,6 +140,24 @@ const projects = (async () => {
 		const exportProjectsButton = document.getElementById("exportProjectsButton");
 		exportProjectsButton.addEventListener("click", event => exportProjects());
 
+
+		const createProjectFromFileButton = document.getElementById("createProjectFromFileButton");
+		createProjectFromFileButton.addEventListener("click", event => {
+			const inputFileDialog = document.createElement("input");
+			inputFileDialog.type = "file";
+			inputFileDialog.addEventListener("change", event => {
+				console.log(event);
+				var importFile = event.target.files[0];
+				if (importFile != null) {
+					const fileReader = new FileReader();
+					fileReader.onload = e => {
+						importProjectFromFile(e.target.result);
+					}
+					fileReader.readAsText(importFile);
+				}
+			});
+			inputFileDialog.click();
+		});
 		const identifierSortOrderAction = document.getElementById("project-identifier-sort-order");
 		identifierSortOrderAction.addEventListener("click", event => {
 			if (event.currentTarget.dataset.sortOrder == "ascending") {
@@ -107,32 +202,18 @@ const projects = (async () => {
 				list();
 			})
 		}
-
+		const searchClear = document.getElementById("search-clear");
+		if (searchClear != null) {
+			searchClear.addEventListener("click", event => {
+				event.currentTarget.value = "";
+				filter = project => project;
+				list();
+			});
+		}
 	};
-	// const exportAll = project => {
-	//     var exportAllPromise = new Promise((resolve, reject) => {
-	//         var all = {
-	//             connections: null,
-	//             connectors: null,
-	//             things: null,
-	//             types: null
-	//         };
-
-	//         Promise.all([this.connectionViewModel.loadConnections(), this.connectorViewModel.loadConnectors(), this.thingViewModel.loadThings(), this.typesViewModel.loadTypes()]).then(result => {
-	//             all.connections = this.connectionViewModel.connections.copy();
-	//             all.connectors = this.connectorViewModel.connectors.copy();
-	//             all.things = this.thingViewModel.things.copy();
-	//             all.types = this.typesViewModel.types.copy();
-	//             all.project = this.active.copy();
-	//             resolve(all);
-	//         })
-	//     })
-	//     return (exportAllPromise);
-	// }
-
 	const getRowHTML = (project) => {
 		return `
-			<tr data-internal_id="${project.internal_id}" data-toggle="modal" data-target="#item-modal" class="item-row">
+			<tr data-internal_id="${project.internal_id}" data-toggle="modal" data-target="#project-modal" class="item-row">
 				<td>${project.active ? "true" : ""}</td>
 				<td><nobr>${project.identifier}</nobr></td>
 				<td>${project.description}</td>
@@ -160,14 +241,14 @@ const projects = (async () => {
 		deleteRow(selectedRow);
 	}
 	const view = (id) => {
-		const projectModal = document.getElementById("projectModal");
+		const projectModal = document.getElementById("project-modal");
 		if (projectModal) {
 			document.body.removeChild(projectModal);
 		}
 		document.body.appendChild(projectProperties.setup());
 		const project = projects.find(project => project.internal_id == id);
-		projectProperties.view(project, save, deleteProject, activateProject);
-		$('#projectModal').modal();
+		projectProperties.view(project, save, deleteProject, activateProject, exportToFile);
+		$('#project-modal').modal();
 	}
 
 	const curatedList = () => {
@@ -222,6 +303,9 @@ const items = (async () => {
 		itemsDB.delete(row.dataset.internal_id).then(result => {
 			const table = document.getElementById("items-table");
 			table.deleteRow(row.rowIndex);
+			load().then(result => {
+				list();
+			});
 		});
 	};
 	const load = () => {
@@ -265,11 +349,14 @@ const items = (async () => {
 	const create = () => {
 		view(null);
 	};
-	const exportItems = () => {
-		const mappedItems = curatedList().map(item => {
-			const newItem = item;
+	const exportItems = async () => {
+		const curatedItems = await curatedList();
+		const project = await projectsDB.getActive();
+		const mappedItems = curatedItems.map(item => {
+			const newItem = { ...item };
 			const type = itemTypes.find(type => type.internal_id == item.type);
-			newItem.type = (type ? type.identifier : ""); '';
+			newItem.type = (newItem.type ? newItem.type.identifier : ""); '';
+			newItem.project = project.identifier;
 			return newItem;
 		});
 
@@ -299,7 +386,7 @@ const items = (async () => {
 		createButton.addEventListener("click", event => create());
 
 		const exportButton = document.getElementById("exportItemsButton");
-		exportButton.addEventListener("click", event => exportItems());
+		exportButton.addEventListener("click", async event => { await exportItems(); });
 
 		const typeSortOrderAction = document.getElementById("item-type-sort-order");
 		typeSortOrderAction.addEventListener("click", event => {
@@ -354,10 +441,23 @@ const items = (async () => {
 		if (searchInput != null) {
 			searchInput.addEventListener("keyup", event => {
 				const criteria = searchInput.value.toLowerCase();
-				filter = item => (item.identifier.toLowerCase().indexOf(criteria) >= 0) || (item.description.toLowerCase().indexOf(criteria) >= 0) || (item.updated.toString().toLowerCase().indexOf(criteria) >= 0) || (item.type.identifier.toLowerCase().indexOf(criteria) >= 0);
+				filter = item => (("" + item.identifier).toLowerCase().indexOf(criteria) >= 0) || (("" + item.description).toLowerCase().indexOf(criteria) >= 0) || (("" + item.updated).toString().toLowerCase().indexOf(criteria) >= 0) || ((item.type ? item.type.identifier : "").toLowerCase().indexOf(criteria) >= 0);
 				list();
 			})
 		}
+		const searchClear = document.getElementById("search-clear");
+		if (searchClear != null) {
+			searchClear.addEventListener("click", event => {
+				document.getElementById("searchInput").value = "";
+				filter = itemType => itemType;
+				list();
+			})
+		}
+		const predefinedfilters = document.getElementById("predefinedfilters");
+		predefinedfilters.addEventListener("change", async event => {
+			list();
+		});
+
 	};
 
 	const getRowHTML = (item) => {
@@ -392,7 +492,7 @@ const items = (async () => {
 		$('#item-modal').modal();
 	}
 
-	const curatedList = () => {
+	const curatedList = async () => {
 		let sortFunction = null;
 		if (sortOrder == null) {
 			sortFunction = (a, b) => ('' + a.identifier).localeCompare(b.identifier);
@@ -407,16 +507,38 @@ const items = (async () => {
 		else {
 			filterFunction = filter;
 		}
+		const predefinedfilterInput = document.getElementById("predefinedfilters");
+		const activeProject = await projectsDB.getActive();
+		const filters = await filtersDB.load(activeProject.internal_id);
+		const predefinedFilter = filters.find(f => f.internal_id == predefinedfilterInput.value);
+		if (predefinedFilter == null) {
+			predefinedFilterFunction = item => true;
+		}
+		else {
+			predefinedFilterFunction = item => {
+				const included = predefinedFilter.included.types.find(includedItem => {
+					const itemTypeInternalId = item.type ? item.type.internal_id : null;
+					return includedItem == itemTypeInternalId;
+				});
+				const visible = predefinedFilter.visible.types.find(includedItem => {
+					const itemTypeInternalId = item.type ? item.type.internal_id : null;
+					return includedItem == itemTypeInternalId;
+				});
+				return included && visible;
+			}
+		}
+
 		let itemsList = null;
 		if (items != null) {
 			itemsList = items
+				.filter(predefinedFilterFunction)
 				.filter(filterFunction)
 				.sort(sortFunction);
 		}
 		return itemsList;
 	}
-	const list = () => {
-		const curatedItemsList = curatedList();
+	const list = async () => {
+		const curatedItemsList = await curatedList();
 		if (curatedItemsList != null) {
 			const html = curatedItemsList
 				.map(item => getRowHTML(item));
@@ -446,6 +568,10 @@ const itemTypes = (async () => {
 		itemTypesDB.delete(row.dataset.internal_id).then(result => {
 			const table = document.getElementById("item-types-table");
 			table.deleteRow(row.rowIndex);
+			load().then(result => {
+				list();
+			});
+
 		});
 	};
 	const load = () => {
@@ -466,9 +592,14 @@ const itemTypes = (async () => {
 	const create = () => {
 		view(null);
 	};
-	const exportItems = () => {
-		const mappedItemTypes = curatedList().map(itemType => {
-			const newItemType = itemType;
+	const exportItems = async () => {
+		const curatedItems = await curatedList();
+		const project = await projectsDB.getActive();
+
+		const mappedItemTypes = curatedItems.map(itemType => {
+			const newItemType = { ...itemType };
+			newItemType.project = project.identifier;
+
 			return newItemType;
 		});
 
@@ -499,7 +630,7 @@ const itemTypes = (async () => {
 		createButton.addEventListener("click", event => create());
 
 		const exportButton = document.getElementById("export-item-types");
-		exportButton.addEventListener("click", event => exportItems());
+		exportButton.addEventListener("click", async event => { await exportItems(); });
 
 		const identifierSortOrderAction = document.getElementById("item-type-identifier-sort-order");
 		identifierSortOrderAction.addEventListener("click", event => {
@@ -541,10 +672,22 @@ const itemTypes = (async () => {
 		if (searchInput != null) {
 			searchInput.addEventListener("keyup", event => {
 				const criteria = searchInput.value.toLowerCase();
-				filter = itemType => (itemType.identifier.toLowerCase().indexOf(criteria) >= 0) || (itemType.description.toLowerCase().indexOf(criteria) >= 0) || (itemType.updated.toString().toLowerCase().indexOf(criteria) >= 0) || (itemType.type.identifier.toLowerCase().indexOf(criteria) >= 0);
+				filter = itemType => (("" + itemType.identifier).toLowerCase().indexOf(criteria) >= 0) || (("" + itemType.description).toLowerCase().indexOf(criteria) >= 0) || (("" + itemType.updated).toString().toLowerCase().indexOf(criteria) >= 0);
 				list();
 			})
 		}
+		const searchClear = document.getElementById("search-clear");
+		if (searchClear != null) {
+			searchClear.addEventListener("click", event => {
+				document.getElementById("searchInput").value = "";
+				filter = itemType => itemType;
+				list();
+			})
+		}
+		const predefinedfilters = document.getElementById("predefinedfilters");
+		predefinedfilters.addEventListener("change", async event => {
+			list();
+		});
 	};
 
 	const getRowHTML = (itemType) => {
@@ -578,7 +721,7 @@ const itemTypes = (async () => {
 		$('#item-type-modal').modal();
 	}
 
-	const curatedList = () => {
+	const curatedList = async () => {
 		let sortFunction = null;
 		if (sortOrder == null) {
 			sortFunction = (a, b) => ('' + a.identifier).localeCompare(b.identifier);
@@ -593,16 +736,32 @@ const itemTypes = (async () => {
 		else {
 			filterFunction = filter;
 		}
+		const predefinedfilterInput = document.getElementById("predefinedfilters");
+		const activeProject = await projectsDB.getActive();
+		const filters = await filtersDB.load(activeProject.internal_id);
+		const predefinedFilter = filters.find(f => f.internal_id == predefinedfilterInput.value);
+		if (predefinedFilter == null) {
+			predefinedFilterFunction = () => true;
+		}
+		else {
+			predefinedFilterFunction = itemType => {
+				const included = predefinedFilter.included.types.find(includedLink => includedLink == itemType.internal_id);
+				const visible = predefinedFilter.visible.types.find(includedLink => includedLink == itemType.internal_id);
+				return included && visible
+			}
+		}
+
 		let itemTypesList = null;
 		if (itemTypes != null) {
 			itemTypesList = itemTypes
+				.filter(predefinedFilterFunction)
 				.filter(filterFunction)
 				.sort(sortFunction);
 		}
 		return itemTypesList;
 	}
-	const list = () => {
-		const curatedItemTypesList = curatedList();
+	const list = async () => {
+		const curatedItemTypesList = await curatedList();
 		if (curatedItemTypesList != null) {
 			const html = curatedItemTypesList
 				.map(itemType => getRowHTML(itemType));
@@ -627,6 +786,20 @@ const links = (async () => {
 	let sortOrder = null;
 	let filter = null;
 	let selectedRow = null;
+
+	const dashesAndEnds = {
+		end: [
+			{ id: 0, name: 'circle', path: 'M 0, 0  m -5, 0  a 5,5 0 1,0 10,0  a 5,5 0 1,0 -10,0', viewbox: '-5 -5 10 10' }
+			, { id: 1, name: 'square', path: 'M 0,0 m -5,-5 L 5,-5 L 5,5 L -5,5 Z', viewbox: '-5 -5 10 10' }
+			, { id: 2, name: 'arrow', path: 'M 0,0 m -5,-5 L 5,0 L -5,5 Z', viewbox: '-5 -5 10 10' }
+			, { id: 3, name: 'stub', path: 'M 0,0 m -1,-5 L 1,-5 L 1,5 L -1,5 Z', viewbox: '-1 -5 2 10' }
+		],
+		dash: [
+			{ name: "short dash", on: 3, off: 3 },
+			{ name: "solid", on: 1, off: 0 },
+			{ name: "dash", on: 7, off: 7 }
+		]
+	};
 
 	const deleteRow = (row) => {
 		linksDB.delete(row.dataset.internal_id).then(result => {
@@ -666,7 +839,7 @@ const links = (async () => {
 						link.source = items.find(item => item.internal_id == source_id);
 						const target_id = link.target;
 						link.target = items.find(item => item.internal_id == target_id);
-						link.type = linkTypes.find(connector => connector.internal_id == link.connector);
+						link.connector = linkTypes.find(connector => connector.internal_id == link.connector);
 						return link;
 					});
 					resolve();
@@ -677,18 +850,25 @@ const links = (async () => {
 	const create = () => {
 		view(null);
 	};
-	const exportLinks = () => {
-		const mappedLinks = curatedList().map(link => {
-			const newLink = link;
+	const exportLinks = async () => {
+		const curatedItems = await curatedList();
+		const project = await projectsDB.getActive();
+
+		const mappedLinks = curatedItems.map(link => {
+			const newLink = { ...link };
 			const linkType = linkTypes.find(type => type.internal_id == link.type);
-			newLink.type = (type ? type.identifier : ""); '';
+			newLink.type = (linkType ? linkType.identifier : "");
+			newLink.source = (newLink.source ? newLink.source.identifier : "");
+			newLink.target = (newLink.target ? newLink.target.identifier : "");
+			newLink.project = project.identifier;
+			newLink.connector = (newLink.connector ? newLink.connector.identifier : "");
 			return newLink;
 		});
 
 		const items = mappedLinks;
 		const replacer = (key, value) => value === null ? '' : value // specify how you want to handle null values here
 		const header = Object.keys(items[0])
-		let csv = links.map(row => header.map(fieldName => JSON.stringify(row[fieldName], replacer)).join(','))
+		let csv = items.map(row => header.map(fieldName => JSON.stringify(row[fieldName], replacer)).join(','))
 		csv.unshift(header.join(','))
 		csv = csv.join('\r\n')
 		const exportJSON = document.createElement("a");
@@ -711,7 +891,7 @@ const links = (async () => {
 		createButton.addEventListener("click", event => create());
 
 		const exportButton = document.getElementById("export-links");
-		exportButton.addEventListener("click", event => exportItems());
+		exportButton.addEventListener("click", event => exportLinks());
 
 		const typeSortOrderAction = document.getElementById("link-type-sort-order");
 		typeSortOrderAction.addEventListener("click", event => {
@@ -835,15 +1015,41 @@ const links = (async () => {
 				list();
 			})
 		}
+		const predefinedfilters = document.getElementById("predefinedfilters");
+		predefinedfilters.addEventListener("change", async event => {
+			list();
+		});
 	};
 
 	const getRowHTML = (link) => {
+		let endPath = "";
+		let dashFormat = "";
+		let linkColour = "";
+		if (link.connector != null) {
+			const end = dashesAndEnds.end.find(e => e.name == link.connector.marker);
+			endPath = end.path;
+			const dash = dashesAndEnds.dash.find(d => d.name == link.connector.dash);
+			dashFormat = dash.on + " " + dash.off;
+			linkColour = (link.colour != null) ? link.colour : link.connector.colour;
+		}
 		return `
 			<tr data-internal_id="${link.internal_id}" data-toggle="modal" data-target="#link-modal" class="item-row">
 				<td><nobr>${link.identifier}</nobr></td>
 				<td>${link.description}</td>
 				<td>${link.source ? link.source.identifier : ""}</td>
-				<td>${link.type ? link.type.identifier : ""}</td>
+				<td>
+					<span id="visual_${link.internal_id}">
+						<svg style="width: 100px; height: 20px;">
+							<line x1="3" y1="10" x2="96" y2="10" stroke="${linkColour}" stroke-width="2" stroke-linecap="round" stroke-dasharray="${dashFormat}" marker-end="url(#link_${link.internal_id})"></line>
+							<defs>
+								<marker markerUnits="strokeWidth" orient="auto" id="link_${link.internal_id}" markerHeight="5px" markerWidth="5px" refX="1" refY="0" viewBox="-5 -5 10 10">
+									<path d="${endPath}" fill="${linkColour}"></path>
+								</marker>
+							</defs>
+						</svg>					
+					</span>
+					<span>${link.connector ? link.connector.identifier : ""}</span>
+				</td>
 				<td>${link.target ? link.target.identifier : ""}</td>
 				<td>${((link.updated == null) ? "" : link.updated.toString().substring(4, link.updated.toString().indexOf(" G")))}</td>
 			</tr>
@@ -871,7 +1077,7 @@ const links = (async () => {
 		$('#link-modal').modal();
 	}
 
-	const curatedList = () => {
+	const curatedList = async () => {
 		let sortFunction = null;
 		if (sortOrder == null) {
 			sortFunction = (a, b) => ('' + a.identifier).localeCompare(b.identifier);
@@ -886,16 +1092,38 @@ const links = (async () => {
 		else {
 			filterFunction = filter;
 		}
+		const predefinedfilterInput = document.getElementById("predefinedfilters");
+		const activeProject = await projectsDB.getActive();
+		const filters = await filtersDB.load(activeProject.internal_id);
+		const predefinedFilter = filters.find(f => f.internal_id == predefinedfilterInput.value);
+		if (predefinedFilter == null) {
+			predefinedFilterFunction = item => true;
+		}
+		else {
+			predefinedFilterFunction = link => {
+				const included = predefinedFilter.included.connectors.find(includedLink => {
+					const linkTypeInternalId = link.connector ? link.connector.internal_id : null;
+					return includedLink == linkTypeInternalId;
+				});
+				const visible = predefinedFilter.visible.connectors.find(includedLink => {
+					const linkTypeInternalId = link.connector ? link.connector.internal_id : null;
+					return includedLink == linkTypeInternalId;
+				});
+				return included && visible
+			}
+		}
+
 		let linksList = null;
 		if (links != null) {
 			linksList = links
+				.filter(predefinedFilterFunction)
 				.filter(filterFunction)
 				.sort(sortFunction);
 		}
 		return linksList;
 	}
-	const list = () => {
-		const curatedLinksList = curatedList();
+	const list = async () => {
+		const curatedLinksList = await curatedList();
 		if (curatedLinksList != null) {
 			const html = curatedLinksList
 				.map(link => getRowHTML(link));
@@ -982,6 +1210,9 @@ const linkTypes = (async () => {
 		linkTypesDB.delete(row.dataset.internal_id).then(result => {
 			const table = document.getElementById("link-types-table");
 			table.deleteRow(row.rowIndex);
+			load().then(result => {
+				list();
+			});
 		});
 	};
 	const load = () => {
@@ -1081,6 +1312,11 @@ const linkTypes = (async () => {
 				list();
 			})
 		}
+		const predefinedfilters = document.getElementById("predefinedfilters");
+		predefinedfilters.addEventListener("change", async event => {
+			list();
+		});
+
 	};
 
 	const getRowHTML = (linkType) => {
@@ -1115,7 +1351,7 @@ const linkTypes = (async () => {
 		$('#link-type-modal').modal();
 	};
 
-	const curatedList = () => {
+	const curatedList = async () => {
 		let sortFunction = null;
 		if (sortOrder == null) {
 			sortFunction = (a, b) => ('' + a.identifier).localeCompare(b.identifier);
@@ -1123,23 +1359,39 @@ const linkTypes = (async () => {
 		else {
 			sortFunction = sortOrder;
 		}
-		let filterFunction = null;
+		let searchCriteriaFunction = null;
 		if (filter == null) {
-			filterFunction = item => true;
+			searchCriteriaFunction = item => true;
 		}
 		else {
-			filterFunction = filter;
+			searchCriteriaFunction = filter;
 		}
+		const predefinedfilterInput = document.getElementById("predefinedfilters");
+		const activeProject = await projectsDB.getActive();
+		const filters = await filtersDB.load(activeProject.internal_id);
+		const predefinedFilter = filters.find(f => f.internal_id == predefinedfilterInput.value);
+		if (predefinedFilter == null) {
+			predefinedFilterFunction = item => true;
+		}
+		else {
+			predefinedFilterFunction = linkType => {
+				const included = predefinedFilter.included.connectors.find(includedLink => includedLink == linkType.internal_id);
+				const visible = predefinedFilter.visible.connectors.find(includedLink => includedLink == linkType.internal_id);
+				return included && visible
+			}
+		}
+
 		let linkTypesList = null;
 		if (linkTypes != null) {
 			linkTypesList = linkTypes
-				.filter(filterFunction)
+				.filter(predefinedFilterFunction)
+				.filter(searchCriteriaFunction)
 				.sort(sortFunction);
 		}
 		return linkTypesList;
 	};
-	const list = () => {
-		const curatedLinkTypesList = curatedList();
+	const list = async () => {
+		const curatedLinkTypesList = await curatedList();
 		if (curatedLinkTypesList != null) {
 			const html = curatedLinkTypesList
 				.map(linkType => getRowHTML(linkType));
@@ -1334,7 +1586,7 @@ let visualise = (async () => {
 
 	const addLink = (source, target) => {
 		return new Promise((resolve, reject) => {
-			linksDB.saveLinkToDB({ source: source, target: target, project_id: "qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY" }).then(savedLink => {
+			linksDB.save({ source: source, target: target, project_id: "qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY" }).then(savedLink => {
 				links.push(savedLink);
 				resolve(savedLink);
 			})
@@ -1349,7 +1601,7 @@ let visualise = (async () => {
 			linkInCollection.target = linkToSave.target;
 			linkInCollection.source = linkToSave.source;
 			linkInCollection.connector = linkToSave.connector;
-			linksDB.saveLinkToDB(linkInCollection).then(() => {
+			linksDB.save(linkInCollection).then(() => {
 				// simulation
 				// 	.items(items)
 				// 	.force("link", d3.forceLink(links).id(d => d.id))
@@ -1391,10 +1643,10 @@ let visualise = (async () => {
 			// const newInternal_id = makeid(20);
 			// newItem.internal_id = newInternal_id;
 			// Add created/updated dates.
-			const savedItem = await itemsDB.saveItemToDB(newItem);
+			const savedItem = await itemsDB.save(newItem);
 			items.push(savedItem);
 
-			linksDB.saveLinkToDB({ source: parentItem, target: savedItem, project_id: "qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY" }).then(result => {
+			linksDB.save({ source: parentItem, target: savedItem, project_id: "qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY" }).then(result => {
 				links.push(result);
 				// simulation
 				// 	.items(items)
@@ -1449,7 +1701,7 @@ let visualise = (async () => {
 			existingItem.fill_colour = item.fill_colour;
 			existingItem.type = item.type;
 			console.log("Saving...");
-			itemsDB.saveItemToDB(existingItem).then(result => {
+			itemsDB.save(existingItem).then(result => {
 				update();
 				simulation.alpha(0.01).restart();
 			});
@@ -1531,72 +1783,73 @@ let visualise = (async () => {
 		})
 	}
 
-	const setupFilterDefaults = () => {
-		displayOptions.filter = {
-			visible: {
-				connectors: linkTypes.map(linkType => linkType.internal_id),
-				types: itemTypes.map(itemType => itemType.internal_id),
-			},
-			included: {
-				connectors: linkTypes.map(linkType => linkType.internal_id),
-				types: itemTypes.map(itemType => itemType.internal_id),
-			}
-		};
-		const filters = filterDB.load(activeProject.internal_id);
-		filters.then(result => {
-			const definedFiltersHTML = result
-				.sort((a, b) => a.identifier.localeCompare(b.identifier))
-				.map(filter => `<option value="${filter.internal_id}">${filter.identifier}</option>`);
-			const predefinedfilters = document.getElementById("predefinedfilters");
-			predefinedfilters.innerHTML = `<option value = "">All</option>` + definedFiltersHTML.join("");
-			predefinedfilters.addEventListener("change", event => {
-				if (event.currentTarget.value.length == 0) {
-					displayOptions.filter = {
-						visible: {
-							connectors: linkTypes.map(linkType => linkType.internal_id),
-							types: itemTypes.map(itemType => itemType.internal_id),
-						},
-						included: {
-							connectors: linkTypes.map(linkType => linkType.internal_id),
-							types: itemTypes.map(itemType => itemType.internal_id),
-						}
-					};
-				}
-				else {
-					displayOptions.filter = result.find(item => item.internal_id == event.currentTarget.value);
-				}
-				update();
-				simulation.alpha(0.01).restart();
-			});
+	// const setupFilterDefaults = () => {
+	// 	displayOptions.filter = {
+	// 		visible: {
+	// 			connectors: linkTypes.map(linkType => linkType.internal_id),
+	// 			types: itemTypes.map(itemType => itemType.internal_id),
+	// 		},
+	// 		included: {
+	// 			connectors: linkTypes.map(linkType => linkType.internal_id),
+	// 			types: itemTypes.map(itemType => itemType.internal_id),
+	// 		}
+	// 	};
+	// 	const filters = filtersDB.load(activeProject.internal_id);
+	// 	filters.then(result => {
+	// 		const definedFiltersHTML = result
+	// 			.sort((a, b) => a.identifier.localeCompare(b.identifier))
+	// 			.map(filter => `<option title="${filter.description}" value="${filter.internal_id}">${filter.identifier}</option>`);
+	// 		const predefinedfilters = document.getElementById("predefinedfilters");
+	// 		predefinedfilters.innerHTML = `<option value = "">All</option>` + definedFiltersHTML.join("");
+	// 		predefinedfilters.addEventListener("change", event => {
+	// 			if (event.currentTarget.value.length == 0) {
+	// 				filtersDB.activate(event.currentTarget.value);
+	// 				displayOptions.filter = {
+	// 					visible: {
+	// 						connectors: linkTypes.map(linkType => linkType.internal_id),
+	// 						types: itemTypes.map(itemType => itemType.internal_id),
+	// 					},
+	// 					included: {
+	// 						connectors: linkTypes.map(linkType => linkType.internal_id),
+	// 						types: itemTypes.map(itemType => itemType.internal_id),
+	// 					}
+	// 				};
+	// 			}
+	// 			else {
+	// 				displayOptions.filter = result.find(item => item.internal_id == event.currentTarget.value);
+	// 			}
+	// 			update();
+	// 			simulation.alpha(0.01).restart();
+	// 		});
 
-		})
-	}
-	const saveFilterOptions = (filterOptions) => {
-		filterOptions.project_id = "qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY";
-		displayOptions.filter = filterOptions;
-		console.log(filterOptions);
-		filterDB.saveFilterToDB(filterOptions)
-		update();
-		simulation.alpha(0.01).restart();
-	}
-	const useFilterOptions = (filterOptions) => {
-		filterOptions.project_id = "qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY";
-		displayOptions.filter = filterOptions;
-		console.log(filterOptions);
-		update();
-		simulation.alpha(0.01).restart();
-	}
-	const filter = (simulation, items, links, linkTypes, itemTypes, displayOptions) => {
-		const filterModal = document.getElementById("filterModal");
-		if (filterModal) {
-			document.body.removeChild(filterModal);
-		}
-		document.body.appendChild(setupFilterModal());
-		filterDB.loadFilters("qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY").then(filters => {
-			viewFilter(simulation, items, links, linkTypes, itemTypes, displayOptions.filter, saveFilterOptions, filters, useFilterOptions);
-			$('#filterModal').modal();
-		});
-	}
+	// 	})
+	// }
+	// const saveFilterOptions = (filterOptions) => {
+	// 	filterOptions.project_id = "qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY";
+	// 	displayOptions.filter = filterOptions;
+	// 	console.log(filterOptions);
+	// 	filtersDB.save(filterOptions)
+	// 	update();
+	// 	simulation.alpha(0.01).restart();
+	// }
+	// const useFilterOptions = (filterOptions) => {
+	// 	filterOptions.project_id = "qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY";
+	// 	displayOptions.filter = filterOptions;
+	// 	console.log(filterOptions);
+	// 	update();
+	// 	simulation.alpha(0.01).restart();
+	// }
+	// const filter = (simulation, items, links, linkTypes, itemTypes, displayOptions) => {
+	// 	const filterModal = document.getElementById("filterModal");
+	// 	if (filterModal) {
+	// 		document.body.removeChild(filterModal);
+	// 	}
+	// 	document.body.appendChild(setupFilterModal());
+	// 	filtersDB.load("qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY").then(filters => {
+	// 		viewFilter(simulation, items, links, linkTypes, itemTypes, displayOptions.filter, saveFilterOptions, filters, useFilterOptions);
+	// 		$('#filterModal').modal();
+	// 	});
+	// }
 	const createActionsMenu = (simulation, items, links, linkTypes, itemTypes, displayOptions) => {
 		d3.select("#actionsMenu").remove();
 		const svg = d3.select("#chart > svg");
@@ -1883,7 +2136,7 @@ let visualise = (async () => {
 		const linksNotIncluded = linksWithoutNodes.filter(link => {
 			let included = false;
 			if (link.connector != null) {
-				included = displayOptions.filter.included.connectors.find(includedLink => includedLink == link.connector.internal_id);
+				included = displayOptions.filter != null ? displayOptions.filter.included.connectors.find(includedLink => includedLink == link.connector.internal_id) : true;
 			}
 			else {
 				included = true;
@@ -1896,7 +2149,7 @@ let visualise = (async () => {
 		let filteredItems = items.filter(item => {
 			let include = false;
 			if (item.type != null) {
-				include = displayOptions.filter.included.types.find(includedType => includedType == item.type.internal_id);
+				include = displayOptions.filter != null ? displayOptions.filter.included.types.find(includedType => includedType == item.type.internal_id) : true;
 			}
 			else {
 				include = true;
@@ -1945,10 +2198,13 @@ let visualise = (async () => {
 				})
 				.style("visibility", d => {
 					let visibility = "hidden";
-					if (displayOptions.filter.visible != null) {
+					if ((displayOptions.filter != null) && (displayOptions.filter.visible != null)) {
 						if (displayOptions.filter.visible.types.filter(item => (d.type != null) && (item == d.type.internal_id)).length > 0) {
 							visibility = "visible";
 						}
+					}
+					else {
+						visibility = "visible";
 					}
 					return visibility;
 				})
@@ -1971,13 +2227,17 @@ let visualise = (async () => {
 				.attr('marker-end', d => `url(#marker_${(d.connector ? d.connector.colour.substring(1) : "gainsboro") + (d.connector ? d.connector.marker : "")})`)
 				.style("visibility", d => {
 					let visibility = "hidden";
-					if (displayOptions.filter.visible != null) {
+					if ((displayOptions.filter != null) && (displayOptions.filter.visible != null)) {
 						if (displayOptions.filter.visible.connectors.filter(item => (d.connector != null) && (item == d.connector.internal_id)).length > 0) {
 							visibility = "visible";
 						}
 						else if (d.connector == null) {
 							visibility = "visible";
 						}
+					}
+					else {
+						// Default "All" filter selected.
+						visibility = "visible";
 					}
 					return visibility;
 				})
@@ -2090,10 +2350,14 @@ let visualise = (async () => {
 				})
 				.style("visibility", d => {
 					let visibility = "hidden";
-					if (displayOptions.filter.visible != null) {
+					if ((displayOptions.filter != null) && (displayOptions.filter.visible != null)) {
 						if (displayOptions.filter.visible.types.filter(item => (d.type != null) && (item == d.type.internal_id)).length > 0) {
 							visibility = "visible";
 						}
+					}
+					else {
+						// Default "All" filter selected.
+						visibility = "visible";
 					}
 					return visibility;
 				})
@@ -2111,13 +2375,75 @@ let visualise = (async () => {
 					d3.select(this).style("cursor", "pointer");
 					// Tooltip
 					const tooltip = d3.select("#tooltip");
-					tooltip.html(() => `<strong>${d.identifier} (${d.type.identifier})</strong><div>${d.description}</div>`)
+					tooltip.html(() => `<strong>${d.identifier} (${d.type ? d.type.identifier : ""})</strong><div>${d.description}</div>`)
 						.style("visibility", "visible")
 						.style("left", (d3.event.pageX + 30) + "px")
 						.style("top", (d3.event.pageY - 30) + "px")
 						.style("border", "solid 1px #aaa")
 						.style("border-radius", "8px")
-						.style("padding", "8px")
+						.style("padding", "8px");
+					// Get all links for this item.
+					const itemLinks = sortedLinks.filter(link => link.source.internal_id == d.internal_id || link.target.internal_id == d.internal_id);
+					const svg = tooltip.append("svg")
+						.attr("width", 300)
+						.attr("height", 120)
+						.append("g");
+					// set the ranges
+					const x = d3.scaleBand()
+						.range([0, 300])
+						.padding(0.1);
+					const y = d3.scaleLinear()
+						.range([100, 0]);
+
+					const thisItemlinks = sortedLinks
+						.filter(sortedLink => sortedLink.target.internal_id == d.internal_id || sortedLink.source.internal_id == d.internal_id);
+
+
+					const nonUniqueconnectors = thisItemlinks.map(link => link.connector);
+					const linkTypesInUse = [...new Set(nonUniqueconnectors)];
+
+					// const zzz = sortedLinks
+					// 	.filter(sortedLink => sortedLink.target.internal_id == d.internal_id || sortedLink.source.internal_id == d.internal_id)
+					// 	.map(link => link.connector.internal_id)
+
+					function countDuplicates(obj, num) {
+						obj[num] = (++obj[num] || 1);
+						return obj;
+					}
+					const uniqueConnectors = nonUniqueconnectors.map(connector => connector ? connector.internal_id : 0).reduce(countDuplicates, {});
+
+					// Scale the range of the data in the domains
+					x.domain(linkTypesInUse.map(linkType => linkType ? linkType.internal_id : 0));
+					y.domain([0, d3.max(linkTypesInUse, connector => {
+						//return 5;
+						return uniqueConnectors[connector ? connector.internal_id : 0];
+						// const zzz = itemLinks.map(itl => itl.connector.internal_id).reduce((accumulator, internal_id) => {
+						// 	if (internal_id == itemLink.connector.internal_id) {
+						// 		accumulator++;
+						// 	}
+						// });
+					})]);
+
+
+					// append the rectangles for the bar chart
+					svg.selectAll(".bar")
+						.data(linkTypesInUse)
+						.enter().append("rect")
+						.attr("class", "bar")
+						.attr("stroke", d => d ? d.colour : "")
+						.attr("fill", d => d ? d.colour : "")
+						.attr("x", d => x(d ? d.internal_id : 0))
+						.attr("width", x.bandwidth())
+						.attr("y", d => y(uniqueConnectors[d ? d.internal_id : 0]))
+						.attr("height", d => 100 - y(uniqueConnectors[d ? d.internal_id : 0]));
+
+					const xAxis = d3.axisBottom(x)
+						.tickFormat((d, i) => {
+							return (d ? linkTypesInUse.find(l => l.internal_id == d).identifier : "Unspecified");
+						})
+					svg.append("g")
+						.attr("transform", "translate(0," + 100 + ")")
+						.call(xAxis);
 
 				})
 				.on("click", d => {
@@ -2143,7 +2469,9 @@ let visualise = (async () => {
 					}
 				})
 				.each(d => {
-					setupRadialGradientFilter(`radialGradient_${d.type.internal_id}`, d.type.background_colour);
+					if (d.type) {
+						setupRadialGradientFilter(`radialGradient_${d.type.internal_id}`, d.type ? d.type.background_colour : "");
+					}
 				});
 		}
 		const infoDisplay = document.getElementById("info");
@@ -2274,7 +2602,7 @@ let visualise = (async () => {
 					.join("g")
 					.attr("class", "type")
 					.on("mouseover", function (d) {
-						console.log(d.identifier)
+						//console.log(d.identifier)
 					})
 				legendItem
 					.append("circle")
@@ -2307,6 +2635,19 @@ let visualise = (async () => {
 		const searchInput = document.getElementById("searchInput");
 		console.log("setting up keyup handler.")
 		searchInput.addEventListener("keyup", event => searchInputEventHandler(event))
+
+		const predefinedfilters = document.getElementById("predefinedfilters");
+		predefinedfilters.addEventListener("change", async event => {
+			const activeProject = await projectsDB.getActive();
+			filtersDB.load(activeProject.internal_id).then(async results => {
+				const filter = results.find(f => f.internal_id == event.srcElement.value);
+				console.log("Updating chart.")
+				displayOptions.filter = filter;
+				update();
+				simulation.alpha(0.005).restart();
+			});
+		});
+
 	}
 
 
@@ -2371,9 +2712,226 @@ let visualise = (async () => {
 		// setupInputEventHandlers(simulation);
 		setupEffects();
 		setupInputEventHandlers();
-		setupFilterDefaults();
+		//setupFilterDefaults();
 		update(simulation, items, unmappedLinks, linkTypes, itemTypes, displayOptions);
-		createActionsMenu(simulation, items, unmappedLinks, linkTypes, itemTypes, displayOptions);
+		//createActionsMenu(simulation, items, unmappedLinks, linkTypes, itemTypes, displayOptions);
 
 	});
+})();
+const filters = (async () => {
+	let filters = null, linkTypes = null, filterTypes = null, activeProject = null, itemTypes = null;
+	let sortOrder = null;
+	let filter = null;
+	let selectedRow = null;
+
+	const deleteRow = (row) => {
+		filtersDB.delete(row.dataset.internal_id).then(result => {
+			const table = document.getElementById("filters-table");
+			table.deleteRow(row.rowIndex);
+			load().then(result => {
+				list();
+			});
+		});
+	};
+	const load = () => {
+		return new Promise((resolve, reject) => {
+			projectsDB.getActive().then(project => {
+				activeProject = project;
+				const activeProjectNameLabel = document.getElementById("filters-active-project");
+				activeProjectNameLabel.innerHTML = activeProject.identifier;
+				Promise.allSettled([
+					filtersDB.load(project.internal_id),
+					linkTypesDB.load(project.internal_id),
+					itemTypesDB.load(project.internal_id),
+				]).then(results => {
+					const loadedFilters = results[0].value;
+					filters = loadedFilters
+						.sort((a, b) => ('' + a.identifier).localeCompare(b.identifier))
+						.map(filter => {
+							return filter;
+						});
+					linkTypes = results[1].value;
+					itemTypes = results[2].value;
+					resolve();
+				});
+
+			});
+		});
+	}
+	const create = () => {
+		view(null);
+	};
+	const exportFilters = () => {
+		const mappedFilters = curatedList().map(filter => {
+			const newFilter = filter;
+			return newFilter;
+		});
+
+		const filters = mappedFilters;
+		const replacer = (key, value) => value === null ? '' : value // specify how you want to handle null values here
+		const header = Object.keys(filters[0])
+		let csv = filters.map(row => header.map(fieldName => JSON.stringify(row[fieldName], replacer)).join(','))
+		csv.unshift(header.join(','))
+		csv = csv.join('\r\n')
+		const exportJSON = document.createElement("a");
+		const blob = new Blob([csv], { type: "text/csv; charset=utf-8;" });
+		const url = URL.createObjectURL(blob);
+		exportJSON.href = url;
+		exportJSON.setAttribute("download", "filters.csv");
+		exportJSON.click();
+	};
+	const setupEventHandlers = () => {
+		const tabLink = document.getElementById("filters-tab");
+		console.assert(tabLink != null, "Cannot find filters-tab");
+		tabLink.addEventListener("click", event => {
+			load().then(result => {
+				list();
+			});
+		});
+
+		const createButton = document.getElementById("createFilterButton");
+		createButton.addEventListener("click", event => create());
+
+		const exportButton = document.getElementById("exportFiltersButton");
+		exportButton.addEventListener("click", event => exportFilters());
+
+		const typeSortOrderAction = document.getElementById("filter-type-sort-order");
+		typeSortOrderAction.addEventListener("click", event => {
+			if (event.currentTarget.dataset.sortOrder == "ascending") {
+				sortOrder = (b, a) => ('' + a.type.identifier).localeCompare(b.type.identifier);
+				event.currentTarget.dataset.sortOrder = "descending";
+			}
+			else {
+				sortOrder = (a, b) => ('' + a.type.identifier).localeCompare(b.type.identifier);
+				event.currentTarget.dataset.sortOrder = "ascending";
+			}
+			list();
+		});
+
+		const identifierSortOrderAction = document.getElementById("filter-identifier-sort-order");
+		identifierSortOrderAction.addEventListener("click", event => {
+			if (event.currentTarget.dataset.sortOrder == "ascending") {
+				sortOrder = (b, a) => ('' + a.identifier).localeCompare(b.identifier);
+				event.currentTarget.dataset.sortOrder = "descending";
+			}
+			else {
+				sortOrder = (a, b) => ('' + a.identifier).localeCompare(b.identifier);
+				event.currentTarget.dataset.sortOrder = "ascending";
+			}
+			list();
+		});
+		const descriptionSortOrderAction = document.getElementById("filter-description-sort-order");
+		descriptionSortOrderAction.addEventListener("click", event => {
+			if (event.currentTarget.dataset.sortOrder == "ascending") {
+				sortOrder = (b, a) => ('' + a.description).localeCompare(b.description);
+				event.currentTarget.dataset.sortOrder = "descending";
+			}
+			else {
+				sortOrder = (a, b) => ('' + a.description).localeCompare(b.description);
+				event.currentTarget.dataset.sortOrder = "ascending";
+			}
+			list();
+		});
+		const updatedSortOrderAction = document.getElementById("filter-updated-sort-order");
+		updatedSortOrderAction.addEventListener("click", event => {
+			if (event.currentTarget.dataset.sortOrder == "ascending") {
+				sortOrder = (b, a) => a.updated - b.updated;
+				event.currentTarget.dataset.sortOrder = "descending";
+			}
+			else {
+				sortOrder = (a, b) => a.updated - b.updated;
+				event.currentTarget.dataset.sortOrder = "ascending";
+			}
+			list();
+		});
+		const searchInput = document.getElementById("searchInput");
+		if (searchInput != null) {
+			searchInput.addEventListener("keyup", event => {
+				const criteria = searchInput.value.toLowerCase();
+				filter = filter => (("" + filter.identifier).toLowerCase().indexOf(criteria) >= 0) || (("" + filter.description).toLowerCase().indexOf(criteria) >= 0) || (("" + filter.updated).toString().toLowerCase().indexOf(criteria) >= 0);
+				list();
+			})
+		}
+	};
+
+	const getRowHTML = (filter) => {
+		return `
+			<tr data-internal_id="${filter.internal_id}" data-toggle="modal" data-target="#filter-modal" class="item-row">
+				<td>${(filter.type == null) ? "" : filter.type.identifier}</td>
+				<td><nobr>${filter.identifier}</nobr></td>
+				<td>${filter.description}</td>
+				<td>${((filter.updated == null) ? "" : filter.updated.toString().substring(4, filter.updated.toString().indexOf(" G")))}</td>
+			</tr>
+		`
+	};
+	const save = (data) => {
+		data.project_id = activeProject.internal_id;
+		filtersDB.save(data).then(result => {
+			load().then(result => {
+				list();
+			});
+		});
+	}
+	const deleteFilter = () => {
+		deleteRow(selectedRow);
+	}
+	const view = (id) => {
+		const filterModal = document.getElementById("filter-modal");
+		if (filterModal) {
+			document.body.removeChild(filterModal);
+		}
+		document.body.appendChild(filterProperties.setup());
+		const filter = filters.find(filter => filter.internal_id == id);
+		filterProperties.view(filter, linkTypes, itemTypes, save, deleteFilter);
+		$('#filter-modal').modal();
+	}
+
+	const curatedList = () => {
+		let sortFunction = null;
+		if (sortOrder == null) {
+			sortFunction = (a, b) => ('' + a.identifier).localeCompare(b.identifier);
+		}
+		else {
+			sortFunction = sortOrder;
+		}
+		let filterFunction = null;
+		if (filter == null) {
+			filterFunction = filter => true;
+		}
+		else {
+			filterFunction = filter;
+		}
+		let filtersList = null;
+		if (filters != null) {
+			filtersList = filters
+				.filter(filterFunction)
+				.sort(sortFunction);
+		}
+		return filtersList;
+	}
+	const list = () => {
+		const curatedFiltersList = curatedList();
+		if (curatedFiltersList != null) {
+			const html = curatedFiltersList
+				.map(filter => getRowHTML(filter));
+			const table = document.getElementById("filters-table");
+			table.tBodies[0].innerHTML = html.join("");
+			var rows = Array.from(table.querySelectorAll(".item-row"));
+			rows.forEach(row => {
+				row.addEventListener("click", event => {
+					view(event.currentTarget.dataset.internal_id);
+					selectedRow = event.currentTarget;
+				});
+			});
+			const infoDisplay = document.getElementById("info");
+			infoDisplay.innerHTML = `${curatedFiltersList.length} filters of ${filters.length} displayed.`;
+
+			const definedFiltersHTML = filters
+				.sort((a, b) => a.identifier.localeCompare(b.identifier))
+				.map(filter => `<option title="${filter.description}" value="${filter.internal_id}">${filter.identifier}</option>`);
+			const predefinedfilters = document.getElementById("predefinedfilters");
+			predefinedfilters.innerHTML = `<option value = "">All</option>` + definedFiltersHTML.join("");
+		}
+	};
+	setupEventHandlers();
 })();

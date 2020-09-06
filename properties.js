@@ -2,7 +2,7 @@
 const projectProperties = {
 	setup: () => {
 		const modal = document.createElement("div");
-		modal.setAttribute("id", "projectModal");
+		modal.setAttribute("id", "project-modal");
 		modal.setAttribute("class", "modal fade");
 		modal.setAttribute("tabindex", "-1");
 		modal.setAttribute("role", "dialog");
@@ -45,7 +45,7 @@ const projectProperties = {
 						</div>
 					</div>
 					<div class="modal-footer">
-						<button id="exportProjectButton" class="btn btn-primary" data-dismiss="modal">Export</button>
+						<button id="savetoFileProjectButton" class="btn btn-primary" data-dismiss="modal">Save to file</button>
 						<button id="setAsActiveProjectButton" class="btn btn-primary" data-dismiss="modal">Set as Active</button>
 						<button id="deleteProjectButton" class="btn btn-primary" data-dismiss="modal">Delete</button>
 						<button id="saveProjectButton" class="btn btn-success" data-dismiss="modal">Save</button>
@@ -63,7 +63,7 @@ const projectProperties = {
 */
 	view: (project, saveCallback, deleteCallback, activateProjectCallback, exportCallback) => {
 
-		delete document.getElementById("projectModal").dataset.internal_id;
+		delete document.getElementById("project-modal").dataset.internal_id;
 
 		// Set up all the links to the HTML buttons.
 		const saveProjectButton = document.getElementById("saveProjectButton");
@@ -81,9 +81,9 @@ const projectProperties = {
 				deleteCallback();
 			}
 		});
-		const exportProjectButton = document.getElementById("exportProjectButton");
-		console.assert(exportProjectButton != null, "Cannot find exportProjectButton");
-		exportProjectButton.addEventListener("click", event => {
+		const savetoFileProjectButton = document.getElementById("savetoFileProjectButton");
+		console.assert(savetoFileProjectButton != null, "Cannot find savetoFileProjectButton");
+		savetoFileProjectButton.addEventListener("click", event => {
 			if (exportCallback != null) {
 				exportCallback(project);
 			}
@@ -98,7 +98,7 @@ const projectProperties = {
 		});
 
 		if (project != null) {
-			document.getElementById("projectModal").dataset.internal_id = project.internal_id;
+			document.getElementById("project-modal").dataset.internal_id = project.internal_id;
 		}
 		document.getElementById("projectIdentifierInput").value = (project == null) ? "" : project.identifier;
 		document.getElementById("projectDescriptionInput").value = (project == null) ? "" : project.description;
@@ -109,7 +109,7 @@ const projectProperties = {
 	},
 	save: (saveCallback) => {
 		// Get all the input elements from the modal dialog.
-		const projectinternal_id = document.getElementById("projectModal").dataset.internal_id;
+		const projectinternal_id = document.getElementById("project-modal").dataset.internal_id;
 		const projectIdentifierInput = document.getElementById("projectIdentifierInput");
 		const projectDescriptionInput = document.getElementById("projectDescriptionInput");
 		const activeProjectInput = document.getElementById("activeProjectInput");
@@ -298,10 +298,11 @@ const itemProperties = {
 		}
 		document.getElementById("itemIdentifierInput").value = (item == null) ? "" : item.identifier;
 		document.getElementById("itemDescriptionInput").value = (item == null) ? "" : item.description;
-		document.getElementById("itemTypeInput").value = (item == null) ? "" : item.type.internal_id;
 		let itemColour = "";
 		let itemBackgroundColour = "";
 		if (item && item.type) {
+			document.getElementById("itemTypeInput").value = item.type.internal_id;
+
 			itemColour = item.type.colour;
 			itemBackgroundColour = item.type.background_colour;
 		}
@@ -366,7 +367,16 @@ const itemProperties = {
 				.attr("r", 10)
 				.attr("cx", 10)
 				.attr("cy", 10)
-				.style("fill", d => (d.background_colour ? d.background_colour : d.type.background_colour))
+				.style("fill", d => {
+					let fillColour = null;
+					if(d.type) {
+						fillColour = d.type.background_colour;
+					}
+					else {
+						fillColour = d.background_colour;
+					}
+					return fillColour;
+				})
 
 			const listDescriptors = itemCells
 				.append("div")
@@ -1085,20 +1095,20 @@ const linkTypeProperties = {
 
 		const defs = svg.append("defs");
 		//const defs = d3.select("defs");
-			const end = linkTypeProperties.dashesAndEnds.end.find(currentEnd => currentEnd.name == markerEnd)
-			defs
-				.append('marker')
-				.attr('markerUnits', 'strokeWidth')
-				.attr('orient', 'auto')
-				.attr('id', "linkType_" + id)
-				.attr('markerHeight', height + "px")
-				.attr('markerWidth', width + "px")
-				.attr('refX', refX) // 19
-				.attr('refY', refY) // 0
-				.attr('viewBox', end.viewbox)
-				.append('path')
-				.attr('d', end.path)
-				.attr('fill', colour);
+		const end = linkTypeProperties.dashesAndEnds.end.find(currentEnd => currentEnd.name == markerEnd)
+		defs
+			.append('marker')
+			.attr('markerUnits', 'strokeWidth')
+			.attr('orient', 'auto')
+			.attr('id', "linkType_" + id)
+			.attr('markerHeight', height + "px")
+			.attr('markerWidth', width + "px")
+			.attr('refX', refX) // 19
+			.attr('refY', refY) // 0
+			.attr('viewBox', end.viewbox)
+			.append('path')
+			.attr('d', end.path)
+			.attr('fill', colour);
 	},
 
 	createLineAndMarker: (id, colour, markerEnd, width, height, dashType) => {
@@ -1231,8 +1241,8 @@ const linkTypeProperties = {
 		document.getElementById("link-type-created").value = (linkType == null) ? "" : linkType.created;
 		document.getElementById("link-type-updated").value = (linkType == null) ? "" : linkType.updated;
 
-		linkTypeProperties.drawDashesAndMarkersSelect("connectorMarkerInput", (linkType == null)? "black" : linkType.colour, (linkType == null)? "" : linkType.dash, (linkType == null)? "" : linkType.marker);
-		
+		linkTypeProperties.drawDashesAndMarkersSelect("connectorMarkerInput", (linkType == null) ? "black" : linkType.colour, (linkType == null) ? "" : linkType.dash, (linkType == null) ? "" : linkType.marker);
+
 		//$('#link-type-identifier').focus()
 		//document.getElementById("link-type-identifier").focus();
 	},
@@ -1258,5 +1268,273 @@ const linkTypeProperties = {
 		if (saveCallback != null) {
 			saveCallback(saveLinkType, parentNode, nodes, links, linkTypes, itemTypes);
 		}
+	}
+}
+const filterProperties = {
+	setup: () => {
+		const modal = document.createElement("div");
+		modal.setAttribute("id", "filter-modal");
+		modal.setAttribute("class", "modal fade");
+		modal.setAttribute("tabindex", "-1");
+		modal.setAttribute("role", "dialog");
+		modal.innerHTML = `  
+        <!-- The Visualise Filter Modal -->
+        <!-- Modal content -->
+        <div class="modal-dialog modal-xl" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="">Visualise Filter</h5>
+                    <button id="visualiseFilterCloseButton" type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    	<span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+            <div class="modal-body">
+				<div class="form-group">
+					<label for="filter-identifier">Identifier</label>
+					<input class="form-control" id="filter-identifier" placeholder="Enter identifier&hellip;"></input>
+					<small id="filter-identifier-help" class="form-text text-muted">The label associated with this filter.</small>
+				</div>
+				<div class="form-group">
+					<label for="filter-description">Description</label>
+					<input class="form-control" id="filter-description" placeholder="Enter description&hellip;"></input>
+					<small id="filter-description-help" class="form-text text-muted">The description for this filter.</small>
+				</div>
+				<div class="row">
+					<div class="col">
+						<div class="form-group">
+							<label for="itemTypesList">Item types</label>
+							<table class="table">
+								<thead>
+									<tr>
+										<th scope="col">Identifier</th>
+										<th scope="col">Visible</th>
+										<th scope="col">Included</th>
+									</tr>
+								</thead>
+								<tbody id="itemTypesInput"></tbody>
+							</table>
+						</div>
+					</div>
+					<div class="col">
+						<div class="form-group">
+							<label for="linkTypesList">Link types</label>
+							<table class="table">
+								<thead>
+									<tr>
+										<th scope="col">Identifier</th>
+										<th scope="col">Visible</th>
+										<th scope="col">Included</th>
+									</tr>
+								</thead>
+								<tbody id="linkTypesInput"></tbody>
+							</table>
+						</div>
+					</div>
+				</div>
+				<div class="form-group">
+					<label for="filter-created">Created</label>
+					<input class="form-control" id="filter-created" readonly></input>
+					<small id="filter-created-help" class="form-text text-muted">Date when the filter was created.</small>
+				</div>
+				<div class="form-group">
+					<label for="filter-updated">Updated</label>
+					<input class="form-control" id="filter-updated" readonly></input>
+					<small id="filter-updated-help" class="form-text text-muted">Date when filter was updated.</small>
+				</div>
+			</div>
+            <div class="modal-footer">
+				<button id="delete-filter" class="btn btn-primary" data-dismiss="modal">Delete</button>
+				<button id="save-filter" class="btn btn-success" data-dismiss="modal">Save</button>
+				<button id="cancelFilterButton" class="btn btn-danger" data-dismiss="modal">Cancel</button>
+            </div>
+        </div>
+		`;
+		return modal;
+	},
+
+	save: (saveCallback, linkTypes, itemTypes) => {
+		let valid = true;
+		const connectorsVisibleFilter = linkTypes
+			.filter(linkType => {
+				const toggleVisible = document.getElementById("toggleLinkVisible" + linkType.internal_id);
+				return toggleVisible.checked;
+			})
+			.map(linkType => linkType.internal_id);
+		const connectorsIncludedFilter = linkTypes
+			.filter(linkType => {
+				const toggleVisible = document.getElementById("toggleLinkIncluded" + linkType.internal_id);
+				return toggleVisible.checked;
+			})
+			.map(linkType => linkType.internal_id);
+
+		const typesVisibleFilter = itemTypes
+			.filter(itemType => {
+				const toggleVisible = document.getElementById("toggleItemVisible" + itemType.internal_id);
+				return toggleVisible.checked;
+			})
+			.map(itemType => itemType.internal_id);
+		const typesIncludedFilter = itemTypes
+			.filter(itemType => {
+				const toggleVisible = document.getElementById("toggleItemIncluded" + itemType.internal_id);
+				return toggleVisible.checked;
+			})
+			.map(itemType => itemType.internal_id);
+
+		const filterIdentifierInput = document.getElementById("filter-identifier");
+		if (filterIdentifierInput != null) {
+			filterIdentifierInput.classList.remove("is-invalid");
+			if (filterIdentifierInput.value.length == 0) {
+				valid = false;
+				filterIdentifierInput.classList.add("is-invalid");
+			}
+		}
+		if (valid) {
+			const filterToSave = {
+				internal_id: document.getElementById("filter-modal").dataset.internal_id ? document.getElementById("filter-modal").dataset.internal_id : null,
+				identifier: filterIdentifierInput.value,
+				description: document.getElementById("filter-description").value,
+				visible: {
+					connectors: connectorsVisibleFilter,
+					types: typesVisibleFilter,
+				},
+				included: {
+					connectors: connectorsIncludedFilter,
+					types: typesIncludedFilter,
+				},
+			};
+			if (saveCallback != null) {
+				saveCallback(filterToSave);
+			}
+		}
+	},
+	view: (filter, linkTypes, itemTypes, saveCallback, deleteCallback) => {
+		delete document.getElementById("filter-modal").dataset.internal_id;
+
+		const linkTypesList = (linkTypes, linkVisiblefilter, linkIncludedFilter) => {
+			return new Promise((resolve, reject) => {
+				const linkTypesHTML = linkTypes
+					.sort((a, b) => a.identifier.localeCompare(b.identifier))
+					.map(linkType => `
+					<tr>
+						<td>${linkType.identifier}</td>
+						<td>
+							<div class="form-group">
+								<div class="custom-control custom-switch">
+									<input type="checkbox" class="custom-control-input" id="toggleLinkVisible${linkType.internal_id}" name="example1">
+									<label class="custom-control-label" for="toggleLinkVisible${linkType.internal_id}"></label>
+								</div>
+							</div>
+						</td>
+						<td>
+							<div class="form-group">
+								<div class="custom-control custom-switch">
+									<input type="checkbox" class="custom-control-input" id="toggleLinkIncluded${linkType.internal_id}" name="example1">
+									<label class="custom-control-label" for="toggleLinkIncluded${linkType.internal_id}"></label>
+								</div>
+							</div>
+						</td>
+					</tr>
+				`);
+				const input = document.getElementById("linkTypesInput");
+				input.innerHTML = linkTypesHTML.join("");
+
+				linkTypes
+					.sort((a, b) => a.identifier.localeCompare(b.identifier))
+					.forEach(linkType => {
+						if ((linkVisiblefilter != null) && (linkVisiblefilter.filter(filterLink => filterLink == linkType.internal_id).length > 0)) {
+							const toggleVisible = document.getElementById("toggleLinkVisible" + linkType.internal_id);
+							toggleVisible.checked = true;
+						}
+						if ((linkIncludedFilter != null) && (linkIncludedFilter.filter(filteritem => filteritem == linkType.internal_id).length > 0)) {
+							const toggleIncluded = document.getElementById("toggleLinkIncluded" + linkType.internal_id);
+							toggleIncluded.checked = true;
+						}
+					});
+
+				resolve();
+			});
+		}
+		const itemTypesList = (itemTypes, itemVisibleFilter, itemIncludedFilter) => {
+			return new Promise((resolve, reject) => {
+				const itemTypesHTML = itemTypes
+					.sort((a, b) => a.identifier.localeCompare(b.identifier))
+					.map(itemType => `
+					<tr>
+						<td>${itemType.identifier}</td>
+						<td>
+							<div class="form-group">
+								<div class="custom-control custom-switch">
+									<input type="checkbox" class="custom-control-input" id="toggleItemVisible${itemType.internal_id}" name="example1">
+									<label class="custom-control-label" for="toggleItemVisible${itemType.internal_id}"></label>
+								</div>
+							</div>
+						</td>
+						<td>
+							<div class="form-group">
+								<div class="custom-control custom-switch">
+									<input type="checkbox" class="custom-control-input" id="toggleItemIncluded${itemType.internal_id}" name="example1">
+									<label class="custom-control-label" for="toggleItemIncluded${itemType.internal_id}"></label>
+								</div>
+							</div>
+						</td>
+					</tr>
+				`);
+				const input = document.getElementById("itemTypesInput");
+				input.innerHTML = itemTypesHTML.join("");
+
+				itemTypes
+					.sort((a, b) => a.identifier.localeCompare(b.identifier))
+					.forEach(itemType => {
+						if ((itemVisibleFilter != null) && (itemVisibleFilter.filter(filteritem => filteritem == itemType.internal_id).length > 0)) {
+							const toggleVisible = document.getElementById("toggleItemVisible" + itemType.internal_id);
+							toggleVisible.checked = true;
+						}
+						if ((itemIncludedFilter != null) && (itemIncludedFilter.filter(filteritem => filteritem == itemType.internal_id).length > 0)) {
+							const toggleIncluded = document.getElementById("toggleItemIncluded" + itemType.internal_id);
+							toggleIncluded.checked = true;
+						}
+					});
+
+				resolve();
+			});
+		};
+
+		// Set up all the links to the HTML buttons.
+		const saveFilterButton = document.getElementById("save-filter");
+		saveFilterButton.addEventListener("click", event => {
+			if (saveCallback != null) {
+				filterProperties.save(saveCallback, linkTypes, itemTypes);
+			}
+		});
+
+		const deleteFilterButton = document.getElementById("delete-filter");
+		deleteFilterButton.addEventListener("click", event => {
+			if (deleteCallback != null) {
+				deleteCallback();
+			}
+		});
+
+		let connectorsVisibleFilter = null;
+		let connectorsIncludedFilter = null;
+		let typesVisibleFilter = null;
+		let typesIncludedFilter = null;
+
+
+		if (filter != null) {
+			document.getElementById("filter-modal").dataset.internal_id = filter.internal_id;
+
+			connectorsVisibleFilter = (filter && filter.visible == null) ? null : filter.visible.connectors;
+			connectorsIncludedFilter = (filter && filter.included == null) ? null : filter.included.connectors;
+			typesVisibleFilter = (filter && filter.visible == null) ? null : filter.visible.types;
+			typesIncludedFilter = (filter && filter.included == null) ? null : filter.included.types;
+		}
+		linkTypesList(linkTypes, connectorsVisibleFilter, connectorsIncludedFilter);
+		itemTypesList(itemTypes, typesVisibleFilter, typesIncludedFilter);
+
+		document.getElementById("filter-identifier").value = (filter == null) ? "" : filter.identifier;
+		document.getElementById("filter-description").value = (filter == null) ? "" : filter.description;
+
+		document.getElementById("filter-created").value = (filter == null) ? "" : filter.created;
+		document.getElementById("filter-updated").value = (filter == null) ? "" : filter.updated;
 	}
 }

@@ -746,44 +746,44 @@
 		return simulation;
 	};
 
-	const filterLinks = (filteredItems, unfilteredLinks) => {
-		const linksWithoutNodes = unfilteredLinks.filter(link => {
-			let sourceFound = false;
-			let targetFound = false;
-			if (link.target != null) {
-				targetFound = (link.target != null) && filteredItems.some(item => item.internal_id == link.target.internal_id);
-			}
-			if (link.source != null) {
-				sourceFound = (link.target != null) && filteredItems.some(item => item.internal_id == link.source.internal_id);
-			}
-			return targetFound && sourceFound;
-		})
-		const linksNotIncluded = linksWithoutNodes.filter(link => {
-			let included = false;
-			if (link.connector != null) {
-				included = displayOptions.filter.included.connectors.find(includedLink => includedLink == link.connector.internal_id);
-			}
-			else {
-				included = true;
-			}
-			return included;
-		})
-		return linksNotIncluded;
-	}
-	const filterItems = (items) => {
-		let filteredItems = items.filter(item => {
-			let include = false;
-			if (item.type != null) {
-				include = displayOptions.filter.included.types.find(includedType => includedType == item.type.internal_id);
-			}
-			else {
-				include = true;
-			}
-			return include;
-		});
-		return filteredItems;
-	}
 	const update = () => {
+		const filterItems = (items) => {
+			let filteredItems = items.filter(item => {
+				let include = false;
+				if (item.type != null) {
+					include = displayOptions.filter.included.types.find(includedType => includedType == item.type.internal_id);
+				}
+				else {
+					include = true;
+				}
+				return include;
+			});
+			return filteredItems;
+		}
+		const filterLinks = (filteredItems, unfilteredLinks) => {
+			const linksWithoutNodes = unfilteredLinks.filter(link => {
+				let sourceFound = false;
+				let targetFound = false;
+				if (link.target != null) {
+					targetFound = (link.target != null) && filteredItems.some(item => item.internal_id == link.target.internal_id);
+				}
+				if (link.source != null) {
+					sourceFound = (link.target != null) && filteredItems.some(item => item.internal_id == link.source.internal_id);
+				}
+				return targetFound && sourceFound;
+			})
+			const linksNotIncluded = linksWithoutNodes.filter(link => {
+				let included = false;
+				if (link.connector != null) {
+					included = displayOptions.filter.included.connectors.find(includedLink => includedLink == link.connector.internal_id);
+				}
+				else {
+					included = true;
+				}
+				return included;
+			})
+			return linksNotIncluded;
+		}
 		const filteredItems = filterItems(items);
 		const sortedLinks = sortAndOrderLinks(filterLinks(filteredItems, links));
 		simulation
@@ -1061,7 +1061,7 @@
 		const mappedLinks = sortedLinks.map(link => link.connector)
 			.sort((a, b) => {
 				let result = 0;
-				if((a && b) && (a.identifier != null) && (b.identifier != null)) {
+				if ((a && b) && (a.identifier != null) && (b.identifier != null)) {
 					result = a.identifier.localeCompare(b.identifier);
 				}
 				return result;
