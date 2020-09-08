@@ -251,3 +251,7 @@
 .item-cell {
 	cursor: pointer;
 }
+.key-title {
+	font-size: x-large;
+	font-weight: bold;
+}

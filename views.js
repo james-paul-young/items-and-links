@@ -1419,7 +1419,9 @@ const linkTypes = (async () => {
 })();
 
 let visualise = (async () => {
-	let links = null, unmappedLinks = null, linkTypes = null, items = null, itemTypes = null, displayOptions = null, simulation = null;;
+	let links = null, unmappedLinks = null, linkTypes = null, items = null, itemTypes = null, displayOptions = null, simulation = null;
+	let heatmapItems = null;
+	let drawnHeatmapItems = null;
 	let currentItemWithContextMenu = null;
 	let itemContextMenu = null;
 	let deltaX = 0;
@@ -1690,7 +1692,7 @@ let visualise = (async () => {
 	}
 	const saveItem = async (item, parentItem, items, links, linkTypes, itemTypes) => {
 		console.log("removing dialogue")
-		document.body.removeChild(document.getElementById("itemModal"));
+		document.body.removeChild(document.getElementById("item-modal"));
 		if (item != null) {
 			const existingItem = items.find(n => n.internal_id == item.internal_id);
 			console.assert(existingItem != null, "Cannot find item in existing items.")
@@ -2182,7 +2184,7 @@ let visualise = (async () => {
 				})
 				.attr("y", function (d) {
 					// Get the height of the text for positioning underneath the item.
-					d.yOffset = this.getBBox().height + displayOptions.itemRadius;
+					d.yOffset = this.getBBox().height + displayOptions.itemRadius + 12;
 				})
 				.style("opacity", d => {
 					let opacity = "0.05";
@@ -2269,9 +2271,9 @@ let visualise = (async () => {
 					if (linkModal) {
 						document.body.removeChild(linkModal);
 					}
-					document.body.appendChild(setupLinkPropertiesModal());
-					viewLink(d, links, linkTypes, items, itemTypes, saveNewLink, deleteLink);
-					$('#linkModal').modal();
+					document.body.appendChild(linkProperties.setup());
+					linkProperties.view(d, links, linkTypes, items, itemTypes, saveNewLink, deleteLink);
+					$('#link-modal').modal();
 				})
 				.each(d => {
 					if (d.connector) {
@@ -2324,18 +2326,76 @@ let visualise = (async () => {
 		}
 		let item = null;
 		if (displayOptions.showItems) {
+			const heatmapOn = displayOptions.filter && displayOptions.filter.heat && displayOptions.filter.heat.connectors && (displayOptions.filter.heat.connectors.length > 0);
+			heatmapItems = [];
+			drawnHeatmapItems = null;
+			let heatColour = null; // (d.type ? d.type.background_colour : "transparent");
+			if (heatmapOn) {
+				// Get all items with a link identified as a heatmap link.
+				// const heatlinks = links
+				// 	.filter(link => link.connector? (link.connector.internal_id == displayOptions.filter.heat.connectors[0]) : false)
+				const itemHeatlinks = links
+					.filter(link => link.connector ? (link.connector.internal_id == displayOptions.filter.heat.connectors[0]) : false)
+					.map((link, index, inputArray) => {
+						const targetItem = filteredItems.find(item => item.internal_id == link.target.internal_id);
+						if (targetItem != null) {
+							// Get all the links to the current item.
+							const thisItemlinks = inputArray
+								.filter(sortedLink => {
+									const foundAsTarget = (sortedLink.target ? sortedLink.target.internal_id == targetItem.internal_id : false);
+									return foundAsTarget;
+								});
+							// get just the link types (connectors) for links to this item.
+							const nonUniqueconnectors = thisItemlinks.map(link => link.connector);
+							// Move link types into anew collection
+							const linkTypesInUse = [...new Set(nonUniqueconnectors)];
+							function countDuplicates(obj, num) {
+								obj[num] = (++obj[num] || 1);
+								return obj;
+							}
+							// Remove any duplicates. Should be left with count of the link types (connectors) to this item.
+							const uniqueConnectors = nonUniqueconnectors.map(connector => connector ? connector.internal_id : 0).reduce(countDuplicates, {});
+							return { item: targetItem.internal_id, linkCount: uniqueConnectors[displayOptions.filter.heat.connectors[0]] };
+						}
+					});
+				// console.log(itemHeatlinks.sort((a, b) => ('' + a.item).localeCompare(b.item)));
+				console.log(itemHeatlinks.filter((heatlink, index, array) => {
+					return array.findIndex(h => h.item == heatlink.item) == index;
+				}));
+				// Remove duplicates.
+				heatmapItems = itemHeatlinks.filter((heatlink, index, array) => array.findIndex(h => h.item == heatlink.item) == index);
+
+				const linkTypeForHeatColour = linkTypes.find(linkType => linkType && linkType.internal_id == displayOptions.filter.heat.connectors[0]);
+				if (linkTypeForHeatColour != null) {
+					heatColour = linkTypeForHeatColour.colour;
+				}
+			}
+			drawnHeatmapItems = svg
+				.selectAll(".heat-item")
+				.data(filteredItems.filter(item => heatmapItems.some(heatMapItem => heatMapItem.item == item.internal_id)))
+				.join("circle")
+				.attr("class", "heat-item")
+				.attr("id", d => "heatCircle_" + d.internal_id)
+				.attr("r", d => {
+					const heatItem = heatmapItems.find(heatmapItem => heatmapItem.item == d.internal_id);
+					return (displayOptions.itemRadius + 100) * heatItem.linkCount;
+				})
+				.style("fill", heatColour)
+				.style("opacity", 0.15)
+					.lower();
 			item = svg
 				.selectAll(".item")
 				.data(filteredItems)
 				.join("circle")
 				// .join("g")
-				.attr("class", "item")
+				.attr("class", "item shadow")
 				.attr("id", d => "circle_" + d.internal_id)
 				// .append("circle")
 				// .attr("class", "itemCircle")
 				.attr("stroke", d => (d.type ? d.type.colour : "transparent"))
 				.attr("r", displayOptions.itemRadius)
-				.attr("fill", d => (d.type ? d.type.background_colour : "transparent"))
+				.style("fill", d => (d.type ? d.type.background_colour : "transparent"))
+				.style("filter", `url(#dropshadow)`)
 				.style("opacity", d => {
 					let opacity = "0.05";
 					if (displayOptions.partialNameCriteria.length > 0) {
@@ -2363,7 +2423,7 @@ let visualise = (async () => {
 				})
 				.call(drag(simulation))
 				.on("mouseenter", function (d) {
-					d3.select(this).transition(750).attr("r", displayOptions.itemRadius * 2);
+					d3.select(this).transition(750).attr("r", (displayOptions.itemRadius * 2));
 				})
 				.on("mouseout", function (d) {
 					d3.select(this).transition(750).attr("r", displayOptions.itemRadius);
@@ -2375,7 +2435,9 @@ let visualise = (async () => {
 					d3.select(this).style("cursor", "pointer");
 					// Tooltip
 					const tooltip = d3.select("#tooltip");
-					tooltip.html(() => `<strong>${d.identifier} (${d.type ? d.type.identifier : ""})</strong><div>${d.description}</div>`)
+					tooltip.html(() => `<h4>${d.identifier} (${d.type ? d.type.identifier : ""})</h4>
+						<div style="padding-bottom: 10px">${d.description}</div>
+						<h5>Link Analysis</h5>`)
 						.style("visibility", "visible")
 						.style("left", (d3.event.pageX + 30) + "px")
 						.style("top", (d3.event.pageY - 30) + "px")
@@ -2383,28 +2445,22 @@ let visualise = (async () => {
 						.style("border-radius", "8px")
 						.style("padding", "8px");
 					// Get all links for this item.
-					const itemLinks = sortedLinks.filter(link => link.source.internal_id == d.internal_id || link.target.internal_id == d.internal_id);
+					// const itemLinks = sortedLinks.filter(link => link.source.internal_id == d.internal_id || link.target.internal_id == d.internal_id);
 					const svg = tooltip.append("svg")
-						.attr("width", 300)
+						.attr("width", 500)
 						.attr("height", 120)
 						.append("g");
-					// set the ranges
-					const x = d3.scaleBand()
-						.range([0, 300])
-						.padding(0.1);
-					const y = d3.scaleLinear()
-						.range([100, 0]);
 
-					const thisItemlinks = sortedLinks
-						.filter(sortedLink => sortedLink.target.internal_id == d.internal_id || sortedLink.source.internal_id == d.internal_id);
+					const thisItemlinks = links
+						.filter(sortedLink => {
+							const targetFound = sortedLink.target? sortedLink.target.internal_id == d.internal_id : false;
+							const sourceFound = sortedLink.source? sortedLink.source.internal_id == d.internal_id : false;
+							return targetFound || sourceFound;
+						});
 
 
 					const nonUniqueconnectors = thisItemlinks.map(link => link.connector);
 					const linkTypesInUse = [...new Set(nonUniqueconnectors)];
-
-					// const zzz = sortedLinks
-					// 	.filter(sortedLink => sortedLink.target.internal_id == d.internal_id || sortedLink.source.internal_id == d.internal_id)
-					// 	.map(link => link.connector.internal_id)
 
 					function countDuplicates(obj, num) {
 						obj[num] = (++obj[num] || 1);
@@ -2412,18 +2468,19 @@ let visualise = (async () => {
 					}
 					const uniqueConnectors = nonUniqueconnectors.map(connector => connector ? connector.internal_id : 0).reduce(countDuplicates, {});
 
-					// Scale the range of the data in the domains
-					x.domain(linkTypesInUse.map(linkType => linkType ? linkType.internal_id : 0));
-					y.domain([0, d3.max(linkTypesInUse, connector => {
-						//return 5;
-						return uniqueConnectors[connector ? connector.internal_id : 0];
-						// const zzz = itemLinks.map(itl => itl.connector.internal_id).reduce((accumulator, internal_id) => {
-						// 	if (internal_id == itemLink.connector.internal_id) {
-						// 		accumulator++;
-						// 	}
-						// });
-					})]);
 
+					// set the ranges
+					const x = d3.scaleLinear()
+						.range([0, 300])
+						.domain([0, d3.max(linkTypesInUse, connector => {
+							return uniqueConnectors[connector ? connector.internal_id : 0];
+						})])
+
+
+					const y = d3.scaleBand()
+						.range([0, 100])
+						.padding(0.1)
+						.domain(linkTypesInUse.map(linkType => linkType ? linkType.internal_id : 0));
 
 					// append the rectangles for the bar chart
 					svg.selectAll(".bar")
@@ -2432,22 +2489,32 @@ let visualise = (async () => {
 						.attr("class", "bar")
 						.attr("stroke", d => d ? d.colour : "")
 						.attr("fill", d => d ? d.colour : "")
-						.attr("x", d => x(d ? d.internal_id : 0))
-						.attr("width", x.bandwidth())
-						.attr("y", d => y(uniqueConnectors[d ? d.internal_id : 0]))
-						.attr("height", d => 100 - y(uniqueConnectors[d ? d.internal_id : 0]));
+						.attr("y", d => y(d ? d.internal_id : 0))
+						.attr("height", y.bandwidth())
+						.attr("transform", "translate(110, 0)")
+						.attr("x", d => x(0) + 1)
+						.transition()
+						.duration(800)
+						.attr("width", d => x(uniqueConnectors[d ? d.internal_id : 0]))
 
-					const xAxis = d3.axisBottom(x)
+					const yAxis = d3.axisLeft(y)
 						.tickFormat((d, i) => {
-							const linkType = linkTypesInUse.find(linkTypeInUse => linkTypeInUse? linkTypeInUse.internal_id == d: false);
-							
-							return linkType? linkType.identifier : "Unspecified";
+							const linkType = linkTypesInUse.find(linkTypeInUse => linkTypeInUse ? linkTypeInUse.internal_id == d : false);
+
+							return linkType ? linkType.identifier : "Unspecified";
 						});
 
 					svg.append("g")
-						.attr("transform", "translate(0," + 100 + ")")
-						.call(xAxis);
+						.attr("transform", "translate(110, 0)")
+						.call(yAxis);
+					svg.append("g")
+						.attr("transform", "translate(110, 100)")
+						.call(d3.axisBottom(x).tickFormat(num => Math.floor(num) == num ? num : null))
+						.selectAll("text")
+						//   .attr("transform", "translate(-10,0)rotate(-45)")
+						.style("text-anchor", "end");
 
+					// Animation
 				})
 				.on("click", d => {
 					const pendingLink = document.querySelector(".link");
@@ -2473,7 +2540,9 @@ let visualise = (async () => {
 				})
 				.each(d => {
 					if (d.type) {
-						setupRadialGradientFilter(`radialGradient_${d.type.internal_id}`, d.type ? d.type.background_colour : "");
+						if (document.getElementById(`radialGradient_${d.type.internal_id}`) == null) {
+							setupRadialGradientFilter(`radialGradient_${d.type.internal_id}`, d.type ? d.type.colour : "");
+						}
 					}
 				});
 		}
@@ -2499,6 +2568,11 @@ let visualise = (async () => {
 			}
 			if (item != null) {
 				item
+					.attr("cx", d => d.x)
+					.attr("cy", d => d.y)
+			}
+			if (drawnHeatmapItems != null) {
+				drawnHeatmapItems
 					.attr("cx", d => d.x)
 					.attr("cy", d => d.y)
 			}
@@ -2553,7 +2627,7 @@ let visualise = (async () => {
 
 			legend
 				.append("text")
-				.attr("class", "keyTitle")
+				.attr("class", "key-title")
 				.text("Key")
 				.attr("x", 15)
 				.attr("y", function () {
@@ -2665,29 +2739,42 @@ let visualise = (async () => {
 				.attr("width", "200%")
 				.attr("height", "200%")
 
-			// append gaussian blur to filter
-			filter.append('feGaussianBlur')
-				.attr('in', 'SourceAlpha')
-				.attr('stdDeviation', 3) // !!! important parameter - blur
-				.attr('result', 'blur');
-
 			// append offset filter to result of gaussion blur filter
 			filter.append('feOffset')
-				.attr('in', 'blur')
-				.attr('dx', 2) // !!! important parameter - x-offset
-				.attr('dy', 3) // !!! important parameter - y-offset
-				.attr('result', 'offsetBlur');
+				.attr('result', 'offOut')
+				.attr('in', 'SourceAlpha')
+				.attr('dx', 5) // !!! important parameter - x-offset
+				.attr('dy', 5) // !!! important parameter - y-offset
 
-			// merge result with original image
-			const feMerge = filter.append('feMerge');
+			// append gaussian blur to filter
+			filter.append('feGaussianBlur')
+				.attr('result', 'blurOut')
+				.attr('in', 'offOut')
+				.attr('stdDeviation', 3) // !!! important parameter - blur
 
-			// first layer result of blur and offset
-			feMerge.append('feMergeItem')
-				.attr('in", "offsetBlur')
+			filter.append('feBlend')
+				.attr('in', 'SourceGraphic')
+				.attr('in2', 'blurOut')
+				.attr('mode', 'normal')
 
-			// original image on top
-			feMerge.append('feMergeItem')
-				.attr('in', 'SourceGraphic');
+
+			// // append offset filter to result of gaussion blur filter
+			// filter.append('feOffset')
+			// 	.attr('in', 'blur')
+			// 	.attr('dx', 2) // !!! important parameter - x-offset
+			// 	.attr('dy', 3) // !!! important parameter - y-offset
+			// 	.attr('result', 'offsetBlur');
+
+			// // merge result with original image
+			// const feMerge = filter.append('feMerge');
+
+			// // first layer result of blur and offset
+			// feMerge.append('feMergeItem')
+			// 	.attr('in", "offsetBlur')
+
+			// // original image on top
+			// feMerge.append('feMergeItem')
+			// 	.attr('in', 'SourceGraphic');
 		}
 		setupDropShadowFilter(defs);
 	}
@@ -2700,13 +2787,13 @@ let visualise = (async () => {
 			.attr('fy', "0.5") // !!! important parameter - blur
 			.attr('r', '1');
 		radialGradient.append("stop")
-			.attr("stop-opacity", "1")
+			.style("stop-opacity", "1")
 			.attr("offset", "0%")
-			.attr("stop-colour", colour);
+			.style("stop-color", colour);
 		radialGradient.append("stop")
-			.attr("stop-opacity", "0")
+			.style("stop-opacity", "0")
 			.attr("offset", "60%")
-			.attr("stop-colour", "#ffffff");
+			.style("stop-color", "#ffffff");
 
 
 	}

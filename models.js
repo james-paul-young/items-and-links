@@ -227,8 +227,8 @@ const itemsDB = {
 				if(typeof(item.type) == "string") {
 					itemTypeInternalId = item.type;
 				}
-				else if(link.source != null) {
-					itemTypeInternalId = item.type.internal_id;
+				else {
+					itemTypeInternalId = (item.type? item.type.internal_id : null);
 				}
 
 				const itemToSave = {
@@ -798,6 +798,7 @@ const filtersDB = {
 					description: filter.description,
 					included: filter.included,
 					visible: filter.visible,
+					heat: filter.heat,
 					active: filter.active,
 					project_id: filter.project_id,
 					created: filter.created,

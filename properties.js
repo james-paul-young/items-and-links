@@ -960,8 +960,8 @@ const linkProperties = {
 			}
 			document.getElementById("linkCreatedInput").value = (link.created == null) ? "" : link.created;
 			document.getElementById("linkUpdatedInput").value = (link.updated == null) ? "" : link.updated;
-			if (link.type != null) {
-				const selectedLink = document.getElementById("availableLinkType" + link.type.internal_id);
+			if (link.connector != null) {
+				const selectedLink = document.getElementById("availableLinkType" + link.connector.internal_id);
 				if (selectedLink != null) {
 					selectedLink.classList.toggle("connectorListSelectedItem");
 				}
@@ -1324,6 +1324,7 @@ const filterProperties = {
 										<th scope="col">Identifier</th>
 										<th scope="col">Visible</th>
 										<th scope="col">Included</th>
+										<th scope="col">Generate Heat</th>
 									</tr>
 								</thead>
 								<tbody id="linkTypesInput"></tbody>
@@ -1367,7 +1368,14 @@ const filterProperties = {
 			})
 			.map(linkType => linkType.internal_id);
 
-		const typesVisibleFilter = itemTypes
+			const connectorsHeatFilter = linkTypes
+			.filter(linkType => {
+				const toggleVisible = document.getElementById("toggleLinkHeat" + linkType.internal_id);
+				return toggleVisible.checked;
+			})
+			.map(linkType => linkType.internal_id);
+
+			const typesVisibleFilter = itemTypes
 			.filter(itemType => {
 				const toggleVisible = document.getElementById("toggleItemVisible" + itemType.internal_id);
 				return toggleVisible.checked;
@@ -1401,6 +1409,9 @@ const filterProperties = {
 					connectors: connectorsIncludedFilter,
 					types: typesIncludedFilter,
 				},
+				heat: {
+					connectors: connectorsHeatFilter,
+				},
 			};
 			if (saveCallback != null) {
 				saveCallback(filterToSave);
@@ -1410,7 +1421,7 @@ const filterProperties = {
 	view: (filter, linkTypes, itemTypes, saveCallback, deleteCallback) => {
 		delete document.getElementById("filter-modal").dataset.internal_id;
 
-		const linkTypesList = (linkTypes, linkVisiblefilter, linkIncludedFilter) => {
+		const linkTypesList = (linkTypes, linkVisiblefilter, linkIncludedFilter, linkHeatFilter) => {
 			return new Promise((resolve, reject) => {
 				const linkTypesHTML = linkTypes
 					.sort((a, b) => a.identifier.localeCompare(b.identifier))
@@ -1433,6 +1444,14 @@ const filterProperties = {
 								</div>
 							</div>
 						</td>
+						<td>
+							<div class="form-group">
+								<div class="custom-control custom-switch">
+									<input type="checkbox" class="custom-control-input" id="toggleLinkHeat${linkType.internal_id}" name="example1">
+									<label class="custom-control-label" for="toggleLinkHeat${linkType.internal_id}"></label>
+								</div>
+							</div>
+						</td>
 					</tr>
 				`);
 				const input = document.getElementById("linkTypesInput");
@@ -1448,6 +1467,10 @@ const filterProperties = {
 						if ((linkIncludedFilter != null) && (linkIncludedFilter.filter(filteritem => filteritem == linkType.internal_id).length > 0)) {
 							const toggleIncluded = document.getElementById("toggleLinkIncluded" + linkType.internal_id);
 							toggleIncluded.checked = true;
+						}
+						if ((linkHeatFilter != null) && (linkHeatFilter.filter(filteritem => filteritem == linkType.internal_id).length > 0)) {
+							const toggleHeat = document.getElementById("toggleLinkHeat" + linkType.internal_id);
+							toggleHeat.checked = true;
 						}
 					});
 
@@ -1516,6 +1539,8 @@ const filterProperties = {
 
 		let connectorsVisibleFilter = null;
 		let connectorsIncludedFilter = null;
+		let connectorsHeatFilter = null;
+
 		let typesVisibleFilter = null;
 		let typesIncludedFilter = null;
 
@@ -1525,10 +1550,12 @@ const filterProperties = {
 
 			connectorsVisibleFilter = (filter && filter.visible == null) ? null : filter.visible.connectors;
 			connectorsIncludedFilter = (filter && filter.included == null) ? null : filter.included.connectors;
+			connectorsHeatFilter = (filter && filter.heat == null) ? null : filter.heat.connectors;
+
 			typesVisibleFilter = (filter && filter.visible == null) ? null : filter.visible.types;
 			typesIncludedFilter = (filter && filter.included == null) ? null : filter.included.types;
 		}
-		linkTypesList(linkTypes, connectorsVisibleFilter, connectorsIncludedFilter);
+		linkTypesList(linkTypes, connectorsVisibleFilter, connectorsIncludedFilter, connectorsHeatFilter);
 		itemTypesList(itemTypes, typesVisibleFilter, typesIncludedFilter);
 
 		document.getElementById("filter-identifier").value = (filter == null) ? "" : filter.identifier;
