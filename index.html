@@ -55,8 +55,8 @@
 						aria-selected="false">Links</a>
 				</li>
 				<li class="nav-item">
-					<a class="nav-link" id="filters-tab" data-toggle="tab" href="#filters" role="tab" aria-controls="filters"
-						aria-selected="false">Filters</a>
+					<a class="nav-link" id="filters-tab" data-toggle="tab" href="#filters" role="tab"
+						aria-controls="filters" aria-selected="false">Filters</a>
 				</li>
 				<li class="nav-item">
 					<a class="nav-link" id="visualise-tab" data-toggle="tab" href="#visualise" role="tab"
@@ -64,28 +64,28 @@
 				</li>
 			</ul>
 			<!-- <form class="form-inline"> -->
-				<div class="input-group" style="width: 250px;" >
-					<input class="form-control"type="text" placeholder="Search&hellip;" id="searchInput">
-					<button id="search-clear" class="btn bg-transparent" style="margin-left: -40px; z-index: 100;">
-					  <i class="fa fa-times"></i>
-					</button>
-				</div>
+			<div class="input-group" style="width: 250px;">
+				<input class="form-control" type="text" placeholder="Search&hellip;" id="searchInput">
+				<button id="search-clear" class="btn bg-transparent" style="margin-left: -40px; z-index: 100;">
+					<i class="fa fa-times"></i>
+				</button>
+			</div>
 			<!-- </form> -->
 		</nav>
 	</header>
 	<main style="padding-left: 10px; padding-right: 10px;">
 		<!-- Tab panes -->
 		<div class="tab-content">
-			<div class="tab-pane active" id="projects" role="tabpanel" aria-labelledby="projects-tab">
+			<div class="tab-pane active fade-in" id="projects" role="tabpanel" aria-labelledby="projects-tab">
 				<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3">
 					<h2>Projects</h2>
 					<div class="btn-toolbar mb-2 mb-md-0">
 						<div class="btn-group mr-2">
 							<button class="btn btn-sm btn-outline-secondary" id="createProjectButton">New
 								Project</button>
-								<button class="btn btn-sm btn-outline-secondary" id="createProjectFromFileButton">New
-									Project from file</button>
-								<button class="btn btn-sm btn-outline-secondary" id="exportProjectsButton">Export
+							<button class="btn btn-sm btn-outline-secondary" id="createProjectFromFileButton">New
+								Project from file</button>
+							<button class="btn btn-sm btn-outline-secondary" id="exportProjectsButton">Export
 								list</button>
 						</div>
 					</div>
@@ -106,7 +106,7 @@
 					</table>
 				</div>
 			</div>
-			<div class="tab-pane" id="items" role="tabpanel" aria-labelledby="items-tab">
+			<div class="tab-pane fade-in" id="items" role="tabpanel" aria-labelledby="items-tab">
 				<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3">
 					<h2>Items (<label id="items-active-project"></label>)</h2>
 					<div class="btn-toolbar mb-2 mb-md-0">
@@ -130,7 +130,7 @@
 					<tbody></tbody>
 				</table>
 			</div>
-			<div class="tab-pane" id="item-types" role="tabpanel" aria-labelledby="item-types-tab">
+			<div class="tab-pane fade-in" id="item-types" role="tabpanel" aria-labelledby="item-types-tab">
 				<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3">
 					<h2>Item Types (<label id="item-types-active-project"></label>)</h2>
 					<div class="btn-toolbar mb-2 mb-md-0">
@@ -154,13 +154,13 @@
 					<tbody></tbody>
 				</table>
 			</div>
-			<div class="tab-pane" id="links" role="tabpanel" aria-labelledby="links-tab">
+			<div class="tab-pane fade-in" id="links" role="tabpanel" aria-labelledby="links-tab">
 				<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3">
 					<h2>Links (<label id="links-active-project"></label>)</h2>
 					<div class="btn-toolbar mb-2 mb-md-0">
 						<div class="btn-group mr-2">
 							<button class="btn btn-sm btn-outline-secondary" id="create-link"
-								title="Create a new Link (F2) ">New Link</button>
+								title="Create a new Link">New Link</button>
 							<button class="btn btn-sm btn-outline-secondary" id="export-links">Export
 								list</button>
 						</div>
@@ -180,13 +180,13 @@
 					<tbody></tbody>
 				</table>
 			</div>
-			<div class="tab-pane" id="link-types" role="tabpanel" aria-labelledby="link-types-tab">
+			<div class="tab-pane fade-in" id="link-types" role="tabpanel" aria-labelledby="link-types-tab">
 				<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3">
 					<h2>Link Types (<label id="link-types-active-project"></label>)</h2>
 					<div class="btn-toolbar mb-2 mb-md-0">
 						<div class="btn-group mr-2">
 							<button class="btn btn-sm btn-outline-secondary" id="create-link-type"
-								title="Create a new Link Type (F2) ">New Link Type</button>
+								title="Create a new Link Type">New Link Type</button>
 							<button class="btn btn-sm btn-outline-secondary" id="export-link-types">Export
 								list</button>
 						</div>
@@ -195,7 +195,6 @@
 				<table id="link-types-table" class="table table-hover">
 					<thead>
 						<tr>
-							<th>Visual</a></th>
 							<th><a id="link-type-identifier-sort-order" href="#" title="Sort order">Identifier</a></th>
 							<th><a id="link-type-description-sort-order" href="#" title="Sort order">Description</a>
 							</th>
@@ -205,13 +204,13 @@
 					<tbody></tbody>
 				</table>
 			</div>
-			<div class="tab-pane" id="filters" role="tabpanel" aria-labelledby="filters-tab">
+			<div class="tab-pane fade-in" id="filters" role="tabpanel" aria-labelledby="filters-tab">
 				<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-filters-center pt-3 pb-2 mb-3">
 					<h2>Filters (<label id="filters-active-project"></label>)</h2>
 					<div class="btn-toolbar mb-2 mb-md-0">
 						<div class="btn-group mr-2">
 							<button class="btn btn-sm btn-outline-secondary" id="createFilterButton"
-								title="Create a new filter (F2) ">New Filter</button>
+								title="Create a new filter">New Filter</button>
 							<button class="btn btn-sm btn-outline-secondary" id="exportFiltersButton">Export
 								list</button>
 						</div>
@@ -229,8 +228,7 @@
 					<tbody></tbody>
 				</table>
 			</div>
-
-			<div class="tab-pane" id="visualise" role="tabpanel" aria-labelledby="visualise-tab">
+			<div class="tab-pane fade-in" id="visualise" role="tabpanel" aria-labelledby="visualise-tab">
 				<div id="chart" style="position: relative;"></div>
 			</div>
 		</div>

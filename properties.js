@@ -369,7 +369,7 @@ const itemProperties = {
 				.attr("cy", 10)
 				.style("fill", d => {
 					let fillColour = null;
-					if(d.type) {
+					if (d.type) {
 						fillColour = d.type.background_colour;
 					}
 					else {
@@ -1226,7 +1226,20 @@ const linkTypeProperties = {
 
 		const colorInput = document.getElementById("link-type-border-colour");
 		colorInput.addEventListener("change", event => {
-			linkTypeProperties.drawDashesAndMarkersSelect("connectorMarkerInput", event.currentTarget.value, linkType.dash, linkType.marker);
+			let dash = "";
+			let marker = "";
+			if (linkType != null) {
+				marker = linkType.marker;
+				dash = linkType.dash;
+			}
+			else {
+				// get the currently selected dash and marker (if one is selected)
+				const allconnectorListItems = document.querySelectorAll(".connectorListSelectedItem");
+				// Should only be one connector selected...
+				marker = allconnectorListItems[0].dataset.marker;
+				dash = allconnectorListItems[0].dataset.dash;
+			}
+			linkTypeProperties.drawDashesAndMarkersSelect("connectorMarkerInput", event.currentTarget.value, dash, marker);
 		});
 		const cancelButton = document.getElementById("link-type-cancel");
 		cancelButton.addEventListener("click", event => {
@@ -1368,14 +1381,14 @@ const filterProperties = {
 			})
 			.map(linkType => linkType.internal_id);
 
-			const connectorsHeatFilter = linkTypes
+		const connectorsHeatFilter = linkTypes
 			.filter(linkType => {
 				const toggleVisible = document.getElementById("toggleLinkHeat" + linkType.internal_id);
 				return toggleVisible.checked;
 			})
 			.map(linkType => linkType.internal_id);
 
-			const typesVisibleFilter = itemTypes
+		const typesVisibleFilter = itemTypes
 			.filter(itemType => {
 				const toggleVisible = document.getElementById("toggleItemVisible" + itemType.internal_id);
 				return toggleVisible.checked;

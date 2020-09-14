@@ -1,7 +1,36 @@
 (async () => {
-	try {
+	// Check if the database needs creation or updating.
+	const checkDatabase = () => {
+		return new Promise((resolve, reject) => {
+			dbName = "thingdb";
+			dbVersion = 9;
+
+			const request = indexedDB.open(dbName, dbVersion);
+			request.onupgradeneeded = (event) => {
+				// console.table("Upgrade needed.");
+				const db = event.target.result;
+				if (event.oldVersion < dbVersion) {
+					// Create a thing ObjectStore for this database
+					db.createObjectStore("thing", { keyPath: "internal_id" });
+					db.createObjectStore("type", { keyPath: "internal_id" });
+					db.createObjectStore("connector", { keyPath: "internal_id" });
+					db.createObjectStore("connection", { keyPath: "internal_id" });
+					db.createObjectStore("project", { keyPath: "internal_id" });
+					db.createObjectStore("filter", { keyPath: "internal_id" });
+					resolve();
+				}
+			};
+			request.onsuccess = event => {
+				event.target.result.close();
+				resolve();
+			}
+		});
+	}
+
+	checkDatabase().then(async result => {
 		const activeProject = await projectsDB.getActive();
 		if (activeProject) {
+
 			const filters = filtersDB.load(activeProject.internal_id);
 			filters.then(result => {
 				const definedFiltersHTML = result
@@ -13,9 +42,7 @@
 				console.log(error);
 			});
 		}
-	}
-	catch (exception) {
-	}
+	});
 })();
 const projects = (async () => {
 	let projects = null;
@@ -67,11 +94,12 @@ const projects = (async () => {
 				items: null,
 				itemTypes: null
 			};
-			Promise.allSettled([linkTypesDB.load(project.internal_id), linksDB.load(project.internal_id), itemsDB.load(project.internal_id), itemTypesDB.load(project.internal_id)]).then(results => {
+			Promise.allSettled([linkTypesDB.load(project.internal_id), linksDB.load(project.internal_id), itemsDB.load(project.internal_id), itemTypesDB.load(project.internal_id), filtersDB.load(project.internal_id)]).then(results => {
 				all.linkTypes = results[0].value;
 				all.links = results[1].value;
 				all.items = results[2].value;
 				all.itemTypes = results[3].value;
+				all.filters = results[4].value;
 				all.project = project;
 				var exportJSON = document.createElement("a");
 				var blob = new Blob([JSON.stringify(all)], { type: "text/JSON; charset=utf-8;" });
@@ -118,6 +146,9 @@ const projects = (async () => {
 
 		const importedLinkTypes = parsedJSON.linkTypes;
 		importedLinkTypes.forEach(importedLinkType => linkTypesDB.save(importedLinkType));
+
+		const importedfilters = parsedJSON.filters;
+		importedfilters.forEach(importedFilter => filtersDB.save(importedFilter));
 
 		console.log(JSON.parse(projectJSON));
 		load().then(async result => {
@@ -457,13 +488,21 @@ const items = (async () => {
 		predefinedfilters.addEventListener("change", async event => {
 			list();
 		});
-
+		document.addEventListener("keydown", event => {
+			if (tabLink.classList.contains("active")) {
+				if (event.ctrlKey && event.key == "n") {
+					const newItemButton = document.getElementById("createItemButton");
+					newItemButton.click();
+					event.preventDefault();
+				}
+			}
+		});
 	};
 
 	const getRowHTML = (item) => {
 		return `
 			<tr data-internal_id="${item.internal_id}" data-toggle="modal" data-target="#item-modal" class="item-row">
-				<td>${(item.type == null) ? "" : item.type.identifier}</td>
+				<td><svg id="svg_${item.internal_id}" class="item-type-list"></svg> ${(item.type == null) ? "" : item.type.identifier}</td>
 				<td><nobr>${item.identifier}</nobr></td>
 				<td>${item.description}</td>
 				<td>${((item.updated == null) ? "" : item.updated.toString().substring(4, item.updated.toString().indexOf(" G")))}</td>
@@ -550,6 +589,16 @@ const items = (async () => {
 					view(event.currentTarget.dataset.internal_id);
 					selectedRow = event.currentTarget;
 				});
+				const svg = d3.select(`#svg_${row.dataset.internal_id}`)
+					.append("g")
+					.attr("transform", "translate(15, 15)")
+				svg.selectAll(".item-row-icon")
+					.data([curatedItemsList.find(item => item.internal_id == row.dataset.internal_id)])
+					.join("circle")
+					.attr("class", "item-row-icon")
+					.attr("stroke", d => (d.type ? d.type.colour : "transparent"))
+					.attr("r", 12)
+					.style("fill", d => (d.type ? d.type.background_colour : "transparent"))
 			});
 			const infoDisplay = document.getElementById("info");
 			infoDisplay.innerHTML = `${curatedItemsList.length} items of ${items.length} displayed.`;
@@ -693,7 +742,7 @@ const itemTypes = (async () => {
 	const getRowHTML = (itemType) => {
 		return `
 			<tr data-internal_id="${itemType.internal_id}" data-toggle="modal" data-target="#item-type-modal" class="item-row">
-				<td><nobr>${itemType.identifier}</nobr></td>
+				<td><nobr><svg id="svg_${itemType.internal_id}" class="item-type-list"></svg> ${itemType.identifier}</nobr></td>
 				<td>${itemType.description}</td>
 				<td>${((itemType.updated == null) ? "" : itemType.updated.toString().substring(4, itemType.updated.toString().indexOf(" G")))}</td>
 			</tr>
@@ -773,6 +822,17 @@ const itemTypes = (async () => {
 					view(event.currentTarget.dataset.internal_id);
 					selectedRow = event.currentTarget;
 				});
+				const svg = d3.select(`#svg_${row.dataset.internal_id}`)
+					.append("g")
+					.attr("transform", "translate(15, 15)")
+				svg.selectAll(".item-type-row-icon")
+					.data([curatedItemTypesList.find(itemType => itemType.internal_id == row.dataset.internal_id)])
+					.join("circle")
+					.attr("class", "item-type-row-icon")
+					.attr("stroke", d => d.colour? d.colour : "transparent")
+					.attr("r", 12)
+					.style("fill", d => d.background_colour? d.background_colour : "transparent")
+
 			});
 			const infoDisplay = document.getElementById("info");
 			infoDisplay.innerHTML = `${curatedItemTypesList.length} items of ${itemTypes.length} displayed.`;
@@ -897,16 +957,16 @@ const links = (async () => {
 		typeSortOrderAction.addEventListener("click", event => {
 			if (event.currentTarget.dataset.sortOrder == "ascending") {
 				sortOrder = (b, a) => {
-					const typeIdentifierA = a.type ? a.type.identifier : "";
-					const typeIdentifierB = b.type ? b.type.identifier : "";
+					const typeIdentifierA = a.connector ? a.connector.identifier : "";
+					const typeIdentifierB = b.connector ? b.connector.identifier : "";
 					return typeIdentifierA.localeCompare(typeIdentifierB);
 				}
 				event.currentTarget.dataset.sortOrder = "descending";
 			}
 			else {
 				sortOrder = (a, b) => {
-					const typeIdentifierA = a.type ? a.type.identifier : "";
-					const typeIdentifierB = b.type ? b.type.identifier : "";
+					const typeIdentifierA = a.connector ? a.connector.identifier : "";
+					const typeIdentifierB = b.connector ? b.connector.identifier : "";
 					return typeIdentifierA.localeCompare(typeIdentifierB);
 				}
 				event.currentTarget.dataset.sortOrder = "ascending";
@@ -1015,9 +1075,31 @@ const links = (async () => {
 				list();
 			})
 		}
+		const searchClear = document.getElementById("search-clear");
+		if (searchClear != null) {
+			searchClear.addEventListener("click", event => {
+				event.currentTarget.value = "";
+				filter = link => link;
+				list();
+			});
+		}
+
 		const predefinedfilters = document.getElementById("predefinedfilters");
 		predefinedfilters.addEventListener("change", async event => {
 			list();
+		});
+		document.addEventListener("keydown", event => {
+			if (tabLink.classList.contains("active")) {
+				if (event.ctrlKey && event.key == "n") {
+					const newLinkButton = document.getElementById("create-link");
+					newLinkButton.click();
+					event.preventDefault();
+				}
+				if (event.ctrlKey && event.key == "f") {
+					searchInput.focus();
+					event.preventDefault();
+				}
+			}
 		});
 	};
 
@@ -1025,19 +1107,24 @@ const links = (async () => {
 		let endPath = "";
 		let dashFormat = "";
 		let linkColour = "";
+		let linkSourceType = "";
+		let linkTargetType = "";
 		if (link.connector != null) {
 			const end = dashesAndEnds.end.find(e => e.name == link.connector.marker);
 			endPath = end.path;
 			const dash = dashesAndEnds.dash.find(d => d.name == link.connector.dash);
 			dashFormat = dash.on + " " + dash.off;
 			linkColour = (link.colour != null) ? link.colour : link.connector.colour;
+			linkSourceType = (link.source && link.source.type) ? link.source.type.identifier : "";
+			linkTargetType = (link.target && link.target.type) ? link.target.type.identifier : "";
+			linkTypeDescription = link.connector? link.connector.description : "";
 		}
 		return `
 			<tr data-internal_id="${link.internal_id}" data-toggle="modal" data-target="#link-modal" class="item-row">
 				<td><nobr>${link.identifier}</nobr></td>
 				<td>${link.description}</td>
-				<td>${link.source ? link.source.identifier : ""}</td>
-				<td>
+				<td title="${link.source ? link.source.description : ""}">${link.source ? link.source.identifier : ""} (${linkSourceType})</td>
+				<td title="${linkTypeDescription}">
 					<span id="visual_${link.internal_id}">
 						<svg style="width: 100px; height: 20px;">
 							<line x1="3" y1="10" x2="96" y2="10" stroke="${linkColour}" stroke-width="2" stroke-linecap="round" stroke-dasharray="${dashFormat}" marker-end="url(#link_${link.internal_id})"></line>
@@ -1050,7 +1137,7 @@ const links = (async () => {
 					</span>
 					<span>${link.connector ? link.connector.identifier : ""}</span>
 				</td>
-				<td>${link.target ? link.target.identifier : ""}</td>
+				<td title="${link.target ? link.target.description : ""}">${link.target ? link.target.identifier : ""} (${linkTargetType})</td>
 				<td>${((link.updated == null) ? "" : link.updated.toString().substring(4, link.updated.toString().indexOf(" G")))}</td>
 			</tr>
 		`;
@@ -1316,14 +1403,21 @@ const linkTypes = (async () => {
 		predefinedfilters.addEventListener("change", async event => {
 			list();
 		});
+		const searchClear = document.getElementById("search-clear");
+		if (searchClear != null) {
+			searchClear.addEventListener("click", event => {
+				event.currentTarget.value = "";
+				filter = linkType => linkType;
+				list();
+			});
+		}
 
 	};
 
 	const getRowHTML = (linkType) => {
 		return `
 			<tr data-internal_id="${linkType.internal_id}" data-toggle="modal" data-target="#link-type-modal" class="item-row">
-				<td><svg id="svg_${linkType.internal_id}" style="width: 100px; height: 20px;"></svg></td>
-				<td><nobr>${linkType.identifier}</nobr></td>
+				<td><nobr><svg id="svg_${linkType.internal_id}" style="width: 110px; height: 20px;"></svg>${linkType.identifier}</nobr></td>
 				<td>${linkType.description}</td>
 				<td>${((linkType.updated == null) ? "" : linkType.updated.toString().substring(4, linkType.updated.toString().indexOf(" G")))}</td>
 			</tr>
@@ -1587,8 +1681,9 @@ let visualise = (async () => {
 	};
 
 	const addLink = (source, target) => {
-		return new Promise((resolve, reject) => {
-			linksDB.save({ source: source, target: target, project_id: "qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY" }).then(savedLink => {
+		return new Promise(async (resolve, reject) => {
+			const project = await projectsDB.getActive();
+			linksDB.save({ source: source, target: target, project_id: project.internal_id }).then(savedLink => {
 				links.push(savedLink);
 				resolve(savedLink);
 			})
@@ -1637,22 +1732,16 @@ let visualise = (async () => {
 	 * @param {object} link The d3 link between the source item and the new item.
 	 * @param {object} item The item to add.
 	 */
-	const addItem = async (item, parentItem) => {
+	const addItem = async (item, parentItem, items, links, linkTypes, itemTypes) => {
 		if (item != null) {
-			const newItem = { x: parentItem.x + 15, y: parentItem.y + 15, ...item }
-			newItem.project_id = "qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY";
-			// // Temporary until SaveItem function added here.
-			// const newInternal_id = makeid(20);
-			// newItem.internal_id = newInternal_id;
-			// Add created/updated dates.
+			const newItem = { x: parentItem.x + 15, y: parentItem.y + 15, ...item };
+			const project = await projectsDB.getActive();
+			newItem.project_id = project.internal_id;
 			const savedItem = await itemsDB.save(newItem);
 			items.push(savedItem);
 
-			linksDB.save({ source: parentItem, target: savedItem, project_id: "qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY" }).then(result => {
+			linksDB.save({ source: parentItem, target: savedItem, project_id: project.internal_id }).then(result => {
 				links.push(result);
-				// simulation
-				// 	.items(items)
-				// 	.force("link", d3.forceLink(links).id(d => d.id))
 				update();
 				simulation.alpha(0.01).restart();
 
@@ -1694,14 +1783,21 @@ let visualise = (async () => {
 		console.log("removing dialogue")
 		document.body.removeChild(document.getElementById("item-modal"));
 		if (item != null) {
-			const existingItem = items.find(n => n.internal_id == item.internal_id);
-			console.assert(existingItem != null, "Cannot find item in existing items.")
-			existingItem.identifier = item.identifier;
-			existingItem.description = item.description;
-			existingItem.colour = item.colour;
-			existingItem.custom_image = item.custom_image;
-			existingItem.fill_colour = item.fill_colour;
-			existingItem.type = item.type;
+			let existingItem = items.find(n => n.internal_id == item.internal_id);
+			if (existingItem != null) {
+				existingItem.identifier = item.identifier;
+				existingItem.description = item.description;
+				existingItem.colour = item.colour;
+				existingItem.custom_image = item.custom_image;
+				existingItem.fill_colour = item.fill_colour;
+				existingItem.background_colour = item.fill_colour;
+				existingItem.type = item.type;
+			}
+			else {
+				const project = await projectsDB.getActive();
+				item.project_id = project.internal_id;
+				existingItem = item;
+			}
 			console.log("Saving...");
 			itemsDB.save(existingItem).then(result => {
 				update();
@@ -1711,247 +1807,6 @@ let visualise = (async () => {
 		else {
 			console.log("Not saving...")
 		}
-	}
-	const exportAsJSON = () => {
-		Promise.allSettled([
-			linksDB.loadConnections("qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY"),
-			itemsDB.loadItems("qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY"),
-			linkTypesDB.loadConnectors("qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY"),
-			itemTypesDB.loadTypes("qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY"),
-		]).then(results => {
-			const exportData = {
-				connections: results[0].value,
-				things: results[1].value,
-				connectors: results[2].value,
-				types: results[3].value,
-				project: JSON.parse(`{"internal_id":"qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY","identifier":"Capabilities","description":"Business Capability Model","_created":"2020-07-29T01:39:54.712Z","_updated":"2020-07-29T04:50:49.185Z","active":true}`)
-			};
-			console.log("Actions click!");
-			const exportJSON = document.createElement("a");
-			const blob = new Blob([JSON.stringify(exportData)], { type: "text/JSON; charset=utf-8;" });
-			const url = URL.createObjectURL(blob);
-			exportJSON.href = url;
-			exportJSON.setAttribute("download", "export.JSON");
-			exportJSON.click();
-
-		})
-
-	}
-	const exportasCSV = () => {
-		Promise.allSettled([
-			linksDB.loadConnections("qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY"),
-			itemsDB.loadItems("qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY"),
-			linkTypesDB.loadConnectors("qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY"),
-			itemTypesDB.loadTypes("qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY"),
-		]).then(results => {
-			const exportData = {
-				connections: results[0].value,
-				things: results[1].value,
-				connectors: results[2].value,
-				types: results[3].value,
-				project: JSON.parse(`{"internal_id":"qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY","identifier":"Capabilities","description":"Business Capability Model","_created":"2020-07-29T01:39:54.712Z","_updated":"2020-07-29T04:50:49.185Z","active":true}`)
-			};
-			const mappedConnections = exportData.connections.map(connection => {
-				const connector = linkTypes.find(connector => connector.internal_id == connection.connector);
-				const source = exportData.things.find(thing => thing.internal_id == connection.source);
-				const target = exportData.things.find(thing => thing.internal_id == connection.target);
-				connection.connector = (connector ? connector.identifier : ""); ''
-				connection.source = (source ? source.identifier : "");
-				connection.target = (target ? target.identifier : "");
-				return connection
-			});
-			console.log("Actions click!");
-			const items = mappedConnections;
-			const replacer = (key, value) => value === null ? '' : value // specify how you want to handle null values here
-			const header = Object.keys(items[0])
-			let csv = items.map(row => header.map(fieldName => JSON.stringify(row[fieldName], replacer)).join(','))
-			csv.unshift(header.join(','))
-			csv = csv.join('\r\n')
-			const exportJSON = document.createElement("a");
-			const blob = new Blob([csv], { type: "text/csv; charset=utf-8;" });
-			const url = URL.createObjectURL(blob);
-			exportJSON.href = url;
-			exportJSON.setAttribute("download", "export.csv");
-			exportJSON.click();
-
-			console.log(csv)
-			// const exportJSON = document.createElement("a");
-			// const blob = new Blob([JSON.stringify(exportData)], { type: "text/JSON; charset=utf-8;" });
-			// const url = URL.createObjectURL(blob);
-			// exportJSON.href = url;
-			// exportJSON.setAttribute("download", "export.JSON");
-			// exportJSON.click();
-
-		})
-	}
-
-	// const setupFilterDefaults = () => {
-	// 	displayOptions.filter = {
-	// 		visible: {
-	// 			connectors: linkTypes.map(linkType => linkType.internal_id),
-	// 			types: itemTypes.map(itemType => itemType.internal_id),
-	// 		},
-	// 		included: {
-	// 			connectors: linkTypes.map(linkType => linkType.internal_id),
-	// 			types: itemTypes.map(itemType => itemType.internal_id),
-	// 		}
-	// 	};
-	// 	const filters = filtersDB.load(activeProject.internal_id);
-	// 	filters.then(result => {
-	// 		const definedFiltersHTML = result
-	// 			.sort((a, b) => a.identifier.localeCompare(b.identifier))
-	// 			.map(filter => `<option title="${filter.description}" value="${filter.internal_id}">${filter.identifier}</option>`);
-	// 		const predefinedfilters = document.getElementById("predefinedfilters");
-	// 		predefinedfilters.innerHTML = `<option value = "">All</option>` + definedFiltersHTML.join("");
-	// 		predefinedfilters.addEventListener("change", event => {
-	// 			if (event.currentTarget.value.length == 0) {
-	// 				filtersDB.activate(event.currentTarget.value);
-	// 				displayOptions.filter = {
-	// 					visible: {
-	// 						connectors: linkTypes.map(linkType => linkType.internal_id),
-	// 						types: itemTypes.map(itemType => itemType.internal_id),
-	// 					},
-	// 					included: {
-	// 						connectors: linkTypes.map(linkType => linkType.internal_id),
-	// 						types: itemTypes.map(itemType => itemType.internal_id),
-	// 					}
-	// 				};
-	// 			}
-	// 			else {
-	// 				displayOptions.filter = result.find(item => item.internal_id == event.currentTarget.value);
-	// 			}
-	// 			update();
-	// 			simulation.alpha(0.01).restart();
-	// 		});
-
-	// 	})
-	// }
-	// const saveFilterOptions = (filterOptions) => {
-	// 	filterOptions.project_id = "qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY";
-	// 	displayOptions.filter = filterOptions;
-	// 	console.log(filterOptions);
-	// 	filtersDB.save(filterOptions)
-	// 	update();
-	// 	simulation.alpha(0.01).restart();
-	// }
-	// const useFilterOptions = (filterOptions) => {
-	// 	filterOptions.project_id = "qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY";
-	// 	displayOptions.filter = filterOptions;
-	// 	console.log(filterOptions);
-	// 	update();
-	// 	simulation.alpha(0.01).restart();
-	// }
-	// const filter = (simulation, items, links, linkTypes, itemTypes, displayOptions) => {
-	// 	const filterModal = document.getElementById("filterModal");
-	// 	if (filterModal) {
-	// 		document.body.removeChild(filterModal);
-	// 	}
-	// 	document.body.appendChild(setupFilterModal());
-	// 	filtersDB.load("qwVoefqcTGxZBWyYxgWrBikLCeyYsgOeIIgNMRxIDlEktmpuXY").then(filters => {
-	// 		viewFilter(simulation, items, links, linkTypes, itemTypes, displayOptions.filter, saveFilterOptions, filters, useFilterOptions);
-	// 		$('#filterModal').modal();
-	// 	});
-	// }
-	const createActionsMenu = (simulation, items, links, linkTypes, itemTypes, displayOptions) => {
-		d3.select("#actionsMenu").remove();
-		const svg = d3.select("#chart > svg");
-		const svgBounds = svg.attr("viewBox").split(',');
-		const actionsMenu = svg
-			.data([0])
-			.append("g")
-			.attr("id", "actionsMenu")
-			.attr("transform", `translate(${parseInt(svgBounds[2]) - 100}, ${parseInt(svgBounds[3]) - 100})`)
-
-		actionsMenu
-			.append("circle")
-			.attr("r", 30)
-			.style("stroke-width", "2px")
-			.style("stroke", "black")
-			.style("fill", "WhiteSmoke")
-
-		const data = [
-			{
-				value: 1,
-				action: "Export as CSV",
-				icon: "f6dd",
-			},
-			{
-				value: 1,
-				action: "Export as JSON",
-				icon: "f019",
-			},
-			{
-				value: 1,
-				action: "Filter",
-				icon: "f0b0",
-			},
-		];
-		const pie = d3.pie()
-			.value(d => d.value.value)
-		const data_ready = pie(d3.entries(data))
-
-		// Item is expanded to twice it's size when user hovers mouse over it. Need to account for this when drawing context menu.
-		const expandedItemRadius = 30 * 2;
-		const arc1 = d3.arc()
-			.innerRadius(0)
-			.outerRadius(100)
-			.cornerRadius(1);
-
-		const arc2 = d3.arc()
-			.innerRadius(50)
-			.outerRadius(100)
-			.cornerRadius(1);
-
-		actionsMenu.selectAll(".actionsMenu")
-			.data(data_ready)
-			.join('text')
-			.attr("class", "fas icon labelName")
-			.attr('d', arc2)
-			.attr('transform', d => {
-				let pos = arc2.centroid(d);
-				pos[0] = pos[0] - 10;
-				pos[1] = pos[1] + 5;
-				//console.log(pos);
-				return 'translate(' + pos + ')';
-			})
-			.text(d => {
-				//console.log(d);
-				return ((d.data.value.icon.length == 0) ? "" : String.fromCharCode(parseInt(d.data.value.icon, 16)));
-			})
-			.append("title")
-			.text(d => d.data.value.action)
-		actionsMenu.selectAll('.actionsMenu')
-			.data(data_ready)
-			.enter()
-			.append("path")
-			.style("stroke", "transparent")
-			.style("opacity", 0.3)
-			.attr('d', arc1)
-			.on("click", d => {
-				switch (d.data.value.action.toLowerCase()) {
-					case "export as json": {
-						exportAsJSON();
-						break;
-					}
-					case "export as csv": {
-						exportasCSV();
-						break;
-					}
-					case "filter": {
-						filter(simulation, items, links, linkTypes, itemTypes, displayOptions);
-						break;
-					}
-				}
-			})
-			.append("title")
-			.text(d => d.data.value.action)
-		// .on("mouseout", () => {
-		// 	const pendingLink = document.querySelector(".link");
-		// 	if (!pendingLink) {
-		// 		itemContextMenu.style("visibility", "hidden")
-		// 	}
-		// })
-
 	}
 	// Context menu for a item.
 	const createItemContextMenu = () => {
@@ -2019,17 +1874,23 @@ let visualise = (async () => {
 			.data(data_ready)
 			.enter()
 			.append("path")
-			.style("stroke", "transparent")
-			.style("opacity", 0.3)
+			.attr("class", "item-context-menu")
+			// .style("stroke", "transparent")
+			// .style("opacity", 0.3)
 			.attr('d', arc1)
-			.on("mouseout", () => {
+			.on("mouseout", function () {
+				console.log("mouseout")
+				d3.select(this).attr("class", "item-context-menu");
 				const pendingLink = document.querySelector(".link");
 				if (!pendingLink) {
 					itemContextMenu.style("visibility", "hidden")
 					currentItemWithContextMenu = null;
 				}
 			})
-			.on("mouseover", function () { d3.select(this).style("cursor", "pointer") })
+			.on("mouseover", function () {
+				//d3.select(this).style("cursor", "pointer");
+				d3.select(this).attr("class", "item-context-menu-hover");
+			})
 			.on("click", function (d) {
 				switch (d.data.value.action) {
 					case "Delete": {
@@ -2037,19 +1898,19 @@ let visualise = (async () => {
 						break;
 					}
 					case "Add": {
-						const itemModal = document.getElementById("itemModal");
+						const itemModal = document.getElementById("item-modal");
 						if (itemModal) {
 							document.body.removeChild(itemModal);
 						}
-						document.body.appendChild(setupItemPropertiesModal());
-						viewItem(null, currentItemWithContextMenu, addItem, items, links, linkTypes, itemTypes, displayOptions);
+						document.body.appendChild(itemProperties.setup());
+						itemProperties.view(null, currentItemWithContextMenu, addItem, items, links, linkTypes, itemTypes, displayOptions);
 						$('#item-modal').modal();
 						break;
 					}
 					case "Link": {
 						const svg = d3.select("#drawingArea");
 						svg
-							.select(".line")
+							.selectAll(".line")
 							.remove();
 						const mouse = d3.mouse(d3.select("#chart > svg").node());
 						const transform = d3.zoomTransform(d3.select("#chart > svg").node());
@@ -2064,11 +1925,10 @@ let visualise = (async () => {
 							.attr("y2", mouseWithZoom[1])
 							.attr("class", "link")
 							.on("click", d => console.log("line click"))
-
 						break;
 					}
 					case "Properties": {
-						const itemModal = document.getElementById("itemModal");
+						const itemModal = document.getElementById("item-modal");
 						if (itemModal) {
 							document.body.removeChild(itemModal);
 						}
@@ -2085,6 +1945,7 @@ let visualise = (async () => {
 		return itemContextMenu;
 	}
 	const setupSimulation = (width, height) => {
+		d3.select("#viewBox").remove();
 		const parentSVG = d3.select("#chart").append("svg")
 			.attr("viewBox", [0, 0, width, height - 110])
 			.call(d3.zoom().on("zoom", () => {
@@ -2223,7 +2084,7 @@ let visualise = (async () => {
 				.attr("id", d => d.internal_id)
 				.lower()
 				.attr("class", "path")
-				.attr("stroke-width", 2)
+				.attr("stroke-width", 10)
 				.attr("stroke", d => (d.connector ? d.connector.colour : "gainsboro"))
 				.attr("fill", "transparent")
 				.attr('marker-end', d => `url(#marker_${(d.connector ? d.connector.colour.substring(1) : "gainsboro") + (d.connector ? d.connector.marker : "")})`)
@@ -2257,10 +2118,10 @@ let visualise = (async () => {
 				})
 				.on("mouseenter", function (d) {
 					// Fatten the line on mouse entry to better allow for link context menu.
-					d3.select(this).transition(750).attr("stroke-width", "5")
+					d3.select(this).transition(750).attr("stroke-width", "15")
 				})
 				.on("mouseout", function (d) {
-					d3.select(this).transition(750).attr("stroke-width", "2")
+					d3.select(this).transition(750).attr("stroke-width", "10")
 					d3.select(this).style("cursor", "default");
 				})
 				.on("mouseover", function (d) {
@@ -2277,7 +2138,7 @@ let visualise = (async () => {
 				})
 				.each(d => {
 					if (d.connector) {
-						createMarkerEnd("marker_", dashesAndEnds, d.connector.marker, d.connector.colour, "5px", "5px", displayOptions.itemRadius + 4, 0);
+						createMarkerEnd("marker_", dashesAndEnds, d.connector.marker, d.connector.colour, "3px", "3px", 11, 0);
 					}
 				})
 		}
@@ -2360,10 +2221,10 @@ let visualise = (async () => {
 					});
 				// console.log(itemHeatlinks.sort((a, b) => ('' + a.item).localeCompare(b.item)));
 				console.log(itemHeatlinks.filter((heatlink, index, array) => {
-					return array.findIndex(h => h.item == heatlink.item) == index;
+					return array.findIndex(h => (heatlink && h) ? h.item == heatlink.item : false) == index;
 				}));
 				// Remove duplicates.
-				heatmapItems = itemHeatlinks.filter((heatlink, index, array) => array.findIndex(h => h.item == heatlink.item) == index);
+				heatmapItems = itemHeatlinks.filter((heatlink, index, array) => array.findIndex(h => (heatlink && h) ? h.item == heatlink.item : false) == index);
 
 				const linkTypeForHeatColour = linkTypes.find(linkType => linkType && linkType.internal_id == displayOptions.filter.heat.connectors[0]);
 				if (linkTypeForHeatColour != null) {
@@ -2376,20 +2237,21 @@ let visualise = (async () => {
 				.join("circle")
 				.attr("class", "heat-item")
 				.attr("id", d => "heatCircle_" + d.internal_id)
-				.attr("r", d => {
+				.attr("r", displayOptions.itemRadius + 100)
+				//.style("fill", heatColour)
+				.style("fill", d => d.type? d.type.background_colour : null)
+				.style("opacity", d => {
 					const heatItem = heatmapItems.find(heatmapItem => heatmapItem.item == d.internal_id);
-					return (displayOptions.itemRadius + 100) * heatItem.linkCount;
+					return 0.15 * heatItem.linkCount;
 				})
-				.style("fill", heatColour)
-				.style("opacity", 0.15)
-					.lower();
+				.lower();
 			item = svg
-				.selectAll(".item")
+				.selectAll(".item-chart")
 				.data(filteredItems)
 				.join("circle")
 				// .join("g")
-				.attr("class", "item shadow")
-				.attr("id", d => "circle_" + d.internal_id)
+				.attr("class", "item-chart")
+				//.attr("id", d => "circle_" + d.internal_id)
 				// .append("circle")
 				// .attr("class", "itemCircle")
 				.attr("stroke", d => (d.type ? d.type.colour : "transparent"))
@@ -2445,18 +2307,13 @@ let visualise = (async () => {
 						.style("border-radius", "8px")
 						.style("padding", "8px");
 					// Get all links for this item.
-					// const itemLinks = sortedLinks.filter(link => link.source.internal_id == d.internal_id || link.target.internal_id == d.internal_id);
-					const svg = tooltip.append("svg")
-						.attr("width", 500)
-						.attr("height", 120)
-						.append("g");
-
 					const thisItemlinks = links
 						.filter(sortedLink => {
-							const targetFound = sortedLink.target? sortedLink.target.internal_id == d.internal_id : false;
-							const sourceFound = sortedLink.source? sortedLink.source.internal_id == d.internal_id : false;
+							const targetFound = sortedLink.target ? sortedLink.target.internal_id == d.internal_id : false;
+							const sourceFound = sortedLink.source ? sortedLink.source.internal_id == d.internal_id : false;
 							return targetFound || sourceFound;
 						});
+					// const itemLinks = sortedLinks.filter(link => link.source.internal_id == d.internal_id || link.target.internal_id == d.internal_id);
 
 
 					const nonUniqueconnectors = thisItemlinks.map(link => link.connector);
@@ -2468,6 +2325,12 @@ let visualise = (async () => {
 					}
 					const uniqueConnectors = nonUniqueconnectors.map(connector => connector ? connector.internal_id : 0).reduce(countDuplicates, {});
 
+					const svg = tooltip.append("svg")
+						.attr("width", 500)
+						.attr("height", (linkTypesInUse.length * 30) + 20)
+					svg
+						.append("g");
+
 
 					// set the ranges
 					const x = d3.scaleLinear()
@@ -2476,9 +2339,9 @@ let visualise = (async () => {
 							return uniqueConnectors[connector ? connector.internal_id : 0];
 						})])
 
-
+					console.log("Height = " + svg.attr("height"))
 					const y = d3.scaleBand()
-						.range([0, 100])
+						.range([0, (linkTypesInUse.length * 30)])
 						.padding(0.1)
 						.domain(linkTypesInUse.map(linkType => linkType ? linkType.internal_id : 0));
 
@@ -2508,7 +2371,7 @@ let visualise = (async () => {
 						.attr("transform", "translate(110, 0)")
 						.call(yAxis);
 					svg.append("g")
-						.attr("transform", "translate(110, 100)")
+						.attr("transform", `translate(110, ${(linkTypesInUse.length * 30)})`)
 						.call(d3.axisBottom(x).tickFormat(num => Math.floor(num) == num ? num : null))
 						.selectAll("text")
 						//   .attr("transform", "translate(-10,0)rotate(-45)")
@@ -2724,7 +2587,81 @@ let visualise = (async () => {
 				simulation.alpha(0.005).restart();
 			});
 		});
+		const searchClear = document.getElementById("search-clear");
+		if (searchClear != null) {
+			searchClear.addEventListener("click", event => {
+				event.currentTarget.value = "";
+				searchInputEventHandler(event);
+				update();
+				simulation.alpha(0.005).restart();
+			});
+		}
 
+		document.addEventListener("keyup", event => {
+			if (event.key == "Escape") {
+				// Clear any pending links.
+				d3.select(".link").remove();
+				// Hide the item context menu .
+				itemContextMenu.style("visibility", "hidden")
+			}
+		})
+		document.addEventListener("keydown", event => {
+			if (tabLink.classList.contains("active")) {
+				if (event.ctrlKey && event.key == "f") {
+					searchInput.focus();
+					event.preventDefault();
+				}
+			}
+		});
+
+		const tabLink = document.getElementById("visualise-tab");
+		console.assert(tabLink != null, "Cannot find visualise-tab");
+		tabLink.addEventListener("click", event => {
+			load().then(result => {
+				update();
+				simulation.alpha(1).restart();
+			});
+		});
+
+		// 		var SpeechRecognition = SpeechRecognition || webkitSpeechRecognition;
+		// 		var SpeechGrammarList = SpeechGrammarList || webkitSpeechGrammarList;
+		// 		var SpeechRecognitionEvent = SpeechRecognitionEvent || webkitSpeechRecognitionEvent;
+		// 		var colors = ['find', 'aqua', 'azure', 'beige', 'bisque', 'black', 'blue', 'brown', 'chocolate', 'coral'];
+		// 		var grammar = '#JSGF V1.0; grammar colors; public <color> = ' + colors.join(' | ') + ' ;';
+		// 		var recognition = new SpeechRecognition();
+		// 		var speechRecognitionList = new SpeechGrammarList();
+		// 		speechRecognitionList.addFromString(grammar, 1);
+		// 		recognition.grammars = speechRecognitionList;
+		// 		recognition.continuous = true;
+		// 		recognition.lang = 'en-US';
+		// 		recognition.interimResults = false;
+		// 		recognition.maxAlternatives = 1;
+		// 		let diagnostic = "";
+		// 		searchInput.addEventListener("mousedown", event => {
+		// 			recognition.start();
+		// 			console.log('Ready to receive a color command.');
+		// 		})
+		// 		searchInput.addEventListener("mouseup", event => {
+		// //			recognition.stop();
+		// 			//console.log('Not ready to receive a color command.');
+		// 		})
+		// 		recognition.onresult = function (event) {
+		// 			var color = event.results[0][0].transcript;
+		// 			diagnostic = 'Result received: ' + color + '.';
+		// 			//bg.style.backgroundColor = color;
+		// 			console.log("Diagnostic: " + diagnostic)
+		// 			console.log('Confidence: ' + event.results[0][0].confidence);
+		// 		}
+		// 		recognition.onspeechend = function () {
+		// 			console.log("Speech end");
+		// 			recognition.stop();
+		// 		}
+		// 		recognition.onnomatch = function (event) {
+		// 			console.log('I didnt recognise that color.');
+		// 		}
+		// 		recognition.onerror = function (event) {
+		// 			console.log('Error occurred in recognition: ' + event.error);
+		// 		}
 	}
 
 
@@ -2803,7 +2740,7 @@ let visualise = (async () => {
 		setupEffects();
 		setupInputEventHandlers();
 		//setupFilterDefaults();
-		update(simulation, items, unmappedLinks, linkTypes, itemTypes, displayOptions);
+		// update(simulation, items, unmappedLinks, linkTypes, itemTypes, displayOptions);
 		//createActionsMenu(simulation, items, unmappedLinks, linkTypes, itemTypes, displayOptions);
 
 	});
@@ -2942,6 +2879,15 @@ const filters = (async () => {
 				list();
 			})
 		}
+		const searchClear = document.getElementById("search-clear");
+		if (searchClear != null) {
+			searchClear.addEventListener("click", event => {
+				event.currentTarget.value = "";
+				filter = item => item;
+				list();
+			});
+		}
+
 	};
 
 	const getRowHTML = (filter) => {

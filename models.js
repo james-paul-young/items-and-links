@@ -374,8 +374,8 @@ const itemTypesDB = {
 					description: itemType.description,
 					project_id: itemType.project_id,
 					colour: itemType.colour,
-					background_colour: itemType.background_colour,
-					fill_colour: itemType.background_colour,
+					background_colour: itemType.fill_colour,
+					fill_colour: itemType.fill_colour,
 					created: itemType.created,
 					updated: itemType.updated,
 				};
