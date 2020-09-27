@@ -133,7 +133,7 @@ const itemProperties = {
 		modal.setAttribute("tabindex", "-1");
 		modal.setAttribute("role", "dialog");
 		modal.innerHTML = `  
-			<div class="modal-dialog modal-xl" role="document">
+			<div class="modal-dialog full_modal-dialog" role="document">
 				<div class="modal-content">
 					<div class="modal-header">
 						<h3 class="modal-title" id="exampleModalLabel">Properties</h3>
@@ -143,8 +143,8 @@ const itemProperties = {
 					</div>
 					<div class="modal-body">
 						<div class="row">
-							<div class="col-sm-6">
-							<h4 class="modal-title" id="exampleModalLabel">Details</h4>
+							<div class="col-sm-5">
+								<h4 class="modal-title" id="exampleModalLabel">Details</h4>
 								<div class="form-group">
 									<label id="itemTypeLabel" for="itemTypeInput">Type</label>
 									<select class="form-control" id="itemTypeInput" placeholder="" autofocus></select>
@@ -171,8 +171,8 @@ const itemProperties = {
 									<small id="itemUpdatedHelp" class="form-text text-muted">Date when item was updated.</small>
 								</div>
 							</div>
-							<div class="col-sm-6">
-							<h4 class="modal-title" id="exampleModalLabel">Apperance</h4>
+							<div class="col-sm-5">
+								<h4 class="modal-title" id="exampleModalLabel">Appearance</h4>
 								<div class="form-group">
 									<label for="itemBorderColourInput">Colour</label>
 									<input id="itemBorderColourInput" class="form-control " type="color" placeholder="Select colour&hellip;"></input>
@@ -196,14 +196,27 @@ const itemProperties = {
 						</div>
 						<div class="row">
 							<div class="col">
-							<h4 class="modal-title" id="exampleModalLabel">Linked items</h4>
-	
+							<h4 class="modal-title" id="exampleModalLabel">Links</h4>
+							<table id="item-links-table" class="table table-hover items-list">
+							<thead>
+								<tr>
+									<th><a id="item-link-identifier-sort-order" href="#" title="Sort order">Identifier</a></th>
+									<th><a id="item-link-description-sort-order" href="#" title="Sort order">Description</a></th>
+									<th><a id="item-link-source-sort-order" href="#" title="Sort order">Source</a></th>
+									<th><a id="item-link-type-sort-order" href="#" title="Sort order">Type</a></th>
+									<th><a id="item-link-target-sort-order" href="#" title="Sort order">Target</a></th>
+								</tr>
+							</thead>
+							<tbody></tbody>
+						</table>
+		<!--
 								<div style="overflow-x: auto; max-width white-space: nowrap;">
 									<table style="border-spacing: 5px; border-collapse: separate;">
 										<tbody id="linkContainer"></tbody>
 									</table>
 								</div>
-							</div>
+								-->
+								</div>
 						</div>
 						<div class="modal-footer">
 						<button id="deleteItemButton" class="btn btn-primary" data-dismiss="modal">Delete</button>
@@ -340,48 +353,120 @@ const itemProperties = {
 				}
 				return foundItem;
 			});
-			console.log("linkedItems = " + linkedItems.length);
-			const itemsRow = d3.select("#linkContainer").append("tr");
-			const itemCells = itemsRow.selectAll("td")
-				.data(linkedItems)
-				.join("td")
-				.style("min-width", "200px")
-				.style("max-width", "250px")
-				.style("min-height", "200px")
-				.style("max-height", "250px")
-				.style("border", "1px solid gainsboro")
-				.style("border-radius", "4px")
-				.style("text-align", "center")
-				.style("vertical-align", "top")
-			itemCells
-				.append("h5")
-				.text(d => d.identifier)
+			const getRowHTML = (link) => {
+				const dashesAndEnds = {
+					end: [
+						{ id: 0, name: 'circle', path: 'M 0, 0  m -5, 0  a 5,5 0 1,0 10,0  a 5,5 0 1,0 -10,0', viewbox: '-5 -5 10 10' }
+						, { id: 1, name: 'square', path: 'M 0,0 m -5,-5 L 5,-5 L 5,5 L -5,5 Z', viewbox: '-5 -5 10 10' }
+						, { id: 2, name: 'arrow', path: 'M 0,0 m -5,-5 L 5,0 L -5,5 Z', viewbox: '-5 -5 10 10' }
+						, { id: 3, name: 'stub', path: 'M 0,0 m -1,-5 L 1,-5 L 1,5 L -1,5 Z', viewbox: '-1 -5 2 10' }
+					],
+					dash: [
+						{ name: "short dash", on: 3, off: 3 },
+						{ name: "solid", on: 1, off: 0 },
+						{ name: "dash", on: 7, off: 7 }
+					]
+				};
+			
+				let endPath = "";
+				let dashFormat = "";
+				let linkColour = "";
+				let linkSourceType = "";
+				let linkTargetType = "";
+				let linkTypeDescription = "";
+				if (link.connector != null) {
+					const end = dashesAndEnds.end.find(e => e.name == link.connector.marker);
+					endPath = end.path;
+					const dash = dashesAndEnds.dash.find(d => d.name == link.connector.dash);
+					dashFormat = dash.on + " " + dash.off;
+					linkColour = (link.colour != null) ? link.colour : link.connector.colour;
+					linkSourceType = (link.source && link.source.type) ? link.source.type.identifier : "";
+					linkTargetType = (link.target && link.target.type) ? link.target.type.identifier : "";
+					linkTypeDescription = link.connector ? link.connector.description : "";
+				}
+				return `
+					<tr data-internal_id="${link.internal_id}" data-toggle="modal" data-target="#link-modal" class="item-row">
+						<td><nobr>${link.identifier}</nobr></td>
+						<td>${link.description}</td>
+						<td title="${link.source ? link.source.description : ""}">${link.source ? link.source.identifier : ""} (${linkSourceType})</td>
+						<td title="${linkTypeDescription}">
+							<span id="visual_${link.internal_id}">
+								<svg style="width: 100px; height: 20px;">
+									<line x1="3" y1="10" x2="96" y2="10" stroke="${linkColour}" stroke-width="2" stroke-linecap="round" stroke-dasharray="${dashFormat}" marker-end="url(#link_${link.internal_id})"></line>
+									<defs>
+										<marker markerUnits="strokeWidth" orient="auto" id="link_${link.internal_id}" markerHeight="5px" markerWidth="5px" refX="1" refY="0" viewBox="-5 -5 10 10">
+											<path d="${endPath}" fill="${linkColour}"></path>
+										</marker>
+									</defs>
+								</svg>					
+							</span>
+							<span>${link.connector ? link.connector.identifier : ""}</span>
+						</td>
+						<td title="${link.target ? link.target.description : ""}">${link.target ? link.target.identifier : ""} (${linkTargetType})</td>
+					</tr>
+				`;
+			};
+			const listLinks = async (links) => {
+				if (links != null) {
+					const html = links
+						.map(link => getRowHTML(link));
+					const table = document.getElementById("item-links-table");
+					table.tBodies[0].innerHTML = html.join("");
+					// var rows = Array.from(table.querySelectorAll(".item-row"));
+					// rows.forEach(row => {
+					// 	row.addEventListener("click", event => {
+					// 		view(event.currentTarget.dataset.internal_id);
+					// 		selectedRow = event.currentTarget;
+					// 	});
+					// });
+					// const infoDisplay = document.getElementById("info");
+					// infoDisplay.innerHTML = `${curatedLinksList.length} links of ${links.length} displayed.`;
+				}
+			}
+			listLinks(itemLinks);
 
-			itemCells
-				.append("div")
-				.attr("class", "")
-				.append("svg")
-				.attr("height", "100px")
-				.attr("viewBox", [0, 0, 20, 20])
-				.append("circle")
-				.attr("r", 10)
-				.attr("cx", 10)
-				.attr("cy", 10)
-				.style("fill", d => {
-					let fillColour = null;
-					if (d.type) {
-						fillColour = d.type.background_colour;
-					}
-					else {
-						fillColour = d.background_colour;
-					}
-					return fillColour;
-				})
+			// console.log("linkedItems = " + linkedItems.length);
+			// 	const itemsRow = d3.select("#linkContainer").append("tr");
+			// 	const itemCells = itemsRow.selectAll("td")
+			// 		.data(linkedItems)
+			// 		.join("td")
+			// 		.style("min-width", "200px")
+			// 		.style("max-width", "250px")
+			// 		.style("min-height", "200px")
+			// 		.style("max-height", "250px")
+			// 		.style("border", "1px solid gainsboro")
+			// 		.style("border-radius", "4px")
+			// 		.style("text-align", "center")
+			// 		.style("vertical-align", "top")
+			// 	itemCells
+			// 		.append("h5")
+			// 		.text(d => d.identifier)
 
-			const listDescriptors = itemCells
-				.append("div")
-				.style("min-height", "50px")
-				.text(d => d.description);
+			// 	itemCells
+			// 		.append("div")
+			// 		.attr("class", "")
+			// 		.append("svg")
+			// 		.attr("height", "100px")
+			// 		.attr("viewBox", [0, 0, 20, 20])
+			// 		.append("circle")
+			// 		.attr("r", 10)
+			// 		.attr("cx", 10)
+			// 		.attr("cy", 10)
+			// 		.style("fill", d => {
+			// 			let fillColour = null;
+			// 			if (d.type) {
+			// 				fillColour = d.type.background_colour;
+			// 			}
+			// 			else {
+			// 				fillColour = d.background_colour;
+			// 			}
+			// 			return fillColour;
+			// 		})
+
+			// 	const listDescriptors = itemCells
+			// 		.append("div")
+			// 		.style("min-height", "50px")
+			// 		.text(d => d.description);
 		}
 		document.getElementById("itemTypeInput").focus();
 
@@ -1266,7 +1351,7 @@ const linkTypeProperties = {
 		const linkDescriptionInput = document.getElementById("link-type-description");
 		const linkBorderColourInput = document.getElementById("link-type-border-colour");
 
-		const allconnectorListItems = document.querySelectorAll(".connectorListSelectedItem");
+		const allconnectorListItems = document.querySelectorAll("#connectorMarkerInput > .connectorListSelectedItem");
 		// Should only be one connector selected...
 		const marker = allconnectorListItems[0].dataset.marker;
 		const dash = allconnectorListItems[0].dataset.dash;

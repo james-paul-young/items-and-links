@@ -829,9 +829,9 @@ const itemTypes = (async () => {
 					.data([curatedItemTypesList.find(itemType => itemType.internal_id == row.dataset.internal_id)])
 					.join("circle")
 					.attr("class", "item-type-row-icon")
-					.attr("stroke", d => d.colour? d.colour : "transparent")
+					.attr("stroke", d => d.colour ? d.colour : "transparent")
 					.attr("r", 12)
-					.style("fill", d => d.background_colour? d.background_colour : "transparent")
+					.style("fill", d => d.background_colour ? d.background_colour : "transparent")
 
 			});
 			const infoDisplay = document.getElementById("info");
@@ -1117,7 +1117,7 @@ const links = (async () => {
 			linkColour = (link.colour != null) ? link.colour : link.connector.colour;
 			linkSourceType = (link.source && link.source.type) ? link.source.type.identifier : "";
 			linkTargetType = (link.target && link.target.type) ? link.target.type.identifier : "";
-			linkTypeDescription = link.connector? link.connector.description : "";
+			linkTypeDescription = link.connector ? link.connector.description : "";
 		}
 		return `
 			<tr data-internal_id="${link.internal_id}" data-toggle="modal" data-target="#link-modal" class="item-row">
@@ -1513,7 +1513,7 @@ const linkTypes = (async () => {
 })();
 
 let visualise = (async () => {
-	let links = null, unmappedLinks = null, linkTypes = null, items = null, itemTypes = null, displayOptions = null, simulation = null;
+	let links = null, unmappedLinks = null, linkTypes = null, items = null, itemTypes = null, displayOptions = null, simulation = null, traceFromItem = null;
 	let heatmapItems = null;
 	let drawnHeatmapItems = null;
 	let currentItemWithContextMenu = null;
@@ -1703,7 +1703,7 @@ let visualise = (async () => {
 				// 	.items(items)
 				// 	.force("link", d3.forceLink(links).id(d => d.id))
 				update();
-				simulation.alpha(0.01).restart();
+				simulation.alpha(0.001).restart();
 			})
 		}
 		console.log(linkToSave);
@@ -1713,12 +1713,12 @@ let visualise = (async () => {
 		if (linkIndex > -1) {
 			links.splice(linkIndex, 1);
 		}
-		linksDB.deleteLinkFromDB(link.internal_id).then(result => {
+		linksDB.delete(link.internal_id).then(result => {
 			// simulation
 			// 	.items(items)
 			// 	.force("link", d3.forceLink(links).id(d => d.id))
 			update();
-			simulation.alpha(0.01).restart();
+			simulation.alpha(0.001).restart();
 
 		});
 	}
@@ -1743,7 +1743,7 @@ let visualise = (async () => {
 			linksDB.save({ source: parentItem, target: savedItem, project_id: project.internal_id }).then(result => {
 				links.push(result);
 				update();
-				simulation.alpha(0.01).restart();
+				simulation.alpha(0.001).restart();
 
 			});
 		}
@@ -1776,7 +1776,7 @@ let visualise = (async () => {
 			// 	.items(items)
 			// 	.force("link", d3.forceLink(links).id(d => d.id))
 			update();
-			simulation.alpha(0.01).restart();
+			simulation.alpha(0.001).restart();
 		});
 	}
 	const saveItem = async (item, parentItem, items, links, linkTypes, itemTypes) => {
@@ -1801,7 +1801,7 @@ let visualise = (async () => {
 			console.log("Saving...");
 			itemsDB.save(existingItem).then(result => {
 				update();
-				simulation.alpha(0.01).restart();
+				simulation.alpha(0.001).restart();
 			});
 		}
 		else {
@@ -1815,21 +1815,31 @@ let visualise = (async () => {
 				value: 1,
 				action: "Properties",
 				icon: "f05a",
+				description: "View the properties of this item.",
 			},
 			{
 				value: 1,
 				action: "Delete",
 				icon: "f1f8",
+				description: "Delete this item.",
 			},
 			{
 				value: 1,
 				action: "Link",
 				icon: "f0c1",
+				description: "Start a link from this item to another item.",
 			},
 			{
 				value: 1,
 				action: "Add",
 				icon: "f067",
+				description: "Add a new item as a child to this item.",
+			},
+			{
+				value: 1,
+				action: "Trace",
+				icon: "f4d7",
+				description: "Display items and links impacted by this item.",
 			},
 		];
 		const pie = d3.pie()
@@ -1934,12 +1944,21 @@ let visualise = (async () => {
 						}
 						document.body.appendChild(itemProperties.setup());
 						itemProperties.view(currentItemWithContextMenu, null, saveItem, items, links, linkTypes, itemTypes);
-						$('#item-modal').modal()
+						$('#item-modal').modal();
+						break;
+					}
+					case "Trace": {
+						traceFromItem = currentItemWithContextMenu;
+						update();
+						simulation.alpha(0.001).restart();
+
 						break;
 					}
 				}
 				console.log(d.data.value.action)
 			})
+			.append("title")
+			.text(d => d.data.value.description);
 
 
 		return itemContextMenu;
@@ -1947,7 +1966,7 @@ let visualise = (async () => {
 	const setupSimulation = (width, height) => {
 		d3.select("#viewBox").remove();
 		const parentSVG = d3.select("#chart").append("svg")
-			.attr("viewBox", [0, 0, width, height - 110])
+			.attr("viewBox", [0, 0, width, height - 105])
 			.call(d3.zoom().on("zoom", () => {
 				const svg = d3.select("#drawingArea");
 				svg.attr("transform", d3.event.transform);
@@ -1967,12 +1986,20 @@ let visualise = (async () => {
 						.attr("y2", xy1[1])
 				}
 			})
+			.on("click", () => {
+				console.log("SVG Click");
+				// if(pendingLink != null) {
+
+				// }
+			});
 		parentSVG
 			.append("g")
-			.attr("id", "drawingArea");
+			.attr("id", "drawingArea")
+			.attr("class", "drawing-area")
 
 		const simulation = d3.forceSimulation()
 			.force("charge", d3.forceManyBody().strength(-10000).distanceMax(1500))
+			// .force("charge", d3.forceManyBody().strength(-3000))
 			.force("center", d3.forceCenter(innerWidth / 2, innerHeight / 2));
 
 		// tooltip
@@ -1980,7 +2007,10 @@ let visualise = (async () => {
 			.attr("id", "tooltip")
 			.style("position", "absolute")
 			.style("visibility", "hidden")
-			.style("background", "whitesmoke");
+			.style("background", "whitesmoke")
+			.style("border", "solid 1px #aaa")
+			.style("border-radius", "8px")
+			.style("padding", "18px")
 		return simulation;
 	};
 
@@ -2021,9 +2051,43 @@ let visualise = (async () => {
 		});
 		return filteredItems;
 	}
+	let traceableItems = null;
+	let traceableLinks = null;
+	let sonar = null;
 	const update = () => {
+		const followLinks = (item) => {
+			let childItems = [];
+			const immediateLinks = sortedLinks.filter(sortedLink => sortedLink.source.internal_id == item.internal_id);
+			immediateLinks.forEach(immediateLink => {
+				if (sortedLinks.some(link => link.internal_id == immediateLink.internal_id)) {
+					childItems.push(immediateLink.target);
+					childItems.push([...followLinks(immediateLink.target, sortedLinks.find(sortedLink => sortedLink.source))]);
+				}
+			});
+			return childItems;
+		}
 		const filteredItems = filterItems(items);
 		const sortedLinks = sortAndOrderLinks(filterLinks(filteredItems, links));
+
+		if (traceFromItem != null) {
+			traceableLinks = sortedLinks
+				.filter(link => (link.source.internal_id == traceFromItem.internal_id) || (link.target.internal_id == traceFromItem.internal_id))
+
+			//console.table(traceableLinks.map(link => { return { source: link.source.identifier, target: link.target.identifier } }));
+			const immediateTargetItems = traceableLinks.map(link => link.target);
+			const immediateSourceItems = traceableLinks.map(link => link.source);
+			traceableItems = immediateSourceItems.concat(immediateTargetItems);
+			const test = followLinks(traceFromItem);
+			console.log("halt!");
+
+			// update();
+			// simulation.alpha(0.001).restart();
+
+		}
+		else {
+			traceableItems = null;
+			traceableLinks = null;
+		}
 		simulation
 			.nodes(filteredItems)
 			.force("link", d3.forceLink(sortedLinks).id(d => d.id))
@@ -2076,7 +2140,7 @@ let visualise = (async () => {
 		}
 		let link = null;
 		if (displayOptions.showLinks) {
-			console.log("sortedLinks.length = " + sortedLinks.length)
+			//console.log("sortedLinks.length = " + sortedLinks.length)
 			link = svg
 				.selectAll(".path")
 				.data(sortedLinks)
@@ -2086,6 +2150,13 @@ let visualise = (async () => {
 				.attr("class", "path")
 				.attr("stroke-width", 10)
 				.attr("stroke", d => (d.connector ? d.connector.colour : "gainsboro"))
+				.attr("stroke-dasharray", d => {
+					let dash = null;
+					if (d.connector) {
+						dash = dashesAndEnds.dash.find(dash => dash.name == d.connector.dash);
+					}
+					return dash ? (dash.on + " " + dash.off) : null
+				})
 				.attr("fill", "transparent")
 				.attr('marker-end', d => `url(#marker_${(d.connector ? d.connector.colour.substring(1) : "gainsboro") + (d.connector ? d.connector.marker : "")})`)
 				.style("visibility", d => {
@@ -2110,6 +2181,9 @@ let visualise = (async () => {
 						if ((d.identifier != null) && (d.identifier.toLowerCase().indexOf(displayOptions.partialNameCriteria.toLowerCase()) >= 0)) {
 							opacity = "1";
 						}
+					}
+					else if ((traceableLinks != null) && (!traceableLinks.some(l => l.internal_id == d.internal_id))) {
+						opacity = "0.05"
 					}
 					else {
 						opacity = "1";
@@ -2238,8 +2312,7 @@ let visualise = (async () => {
 				.attr("class", "heat-item")
 				.attr("id", d => "heatCircle_" + d.internal_id)
 				.attr("r", displayOptions.itemRadius + 100)
-				//.style("fill", heatColour)
-				.style("fill", d => d.type? d.type.background_colour : null)
+				.style("fill", heatColour)
 				.style("opacity", d => {
 					const heatItem = heatmapItems.find(heatmapItem => heatmapItem.item == d.internal_id);
 					return 0.15 * heatItem.linkCount;
@@ -2256,6 +2329,7 @@ let visualise = (async () => {
 				// .attr("class", "itemCircle")
 				.attr("stroke", d => (d.type ? d.type.colour : "transparent"))
 				.attr("r", displayOptions.itemRadius)
+				//.style("fill", d => `url(#radialGradient_${d.type.internal_id}`)
 				.style("fill", d => (d.type ? d.type.background_colour : "transparent"))
 				.style("filter", `url(#dropshadow)`)
 				.style("opacity", d => {
@@ -2264,6 +2338,9 @@ let visualise = (async () => {
 						if ((d.identifier != null) && (d.identifier.toLowerCase().indexOf(displayOptions.partialNameCriteria.toLowerCase()) >= 0)) {
 							opacity = "1";
 						}
+					}
+					else if ((traceableItems != null) && (!traceableItems.some(i => i.internal_id == d.internal_id))) {
+						opacity = "0.05"
 					}
 					else {
 						opacity = "1";
@@ -2286,26 +2363,35 @@ let visualise = (async () => {
 				.call(drag(simulation))
 				.on("mouseenter", function (d) {
 					d3.select(this).transition(750).attr("r", (displayOptions.itemRadius * 2));
+					// Call "update" here.
+					// d3.selectAll(".item-chart")
+					// 	.data(items.filter(item => immediateItems.some(i => i.internal_id != item.internal_id)))
+					// 	.attr("opacity", "0")
 				})
 				.on("mouseout", function (d) {
 					d3.select(this).transition(750).attr("r", displayOptions.itemRadius);
 					d3.select(this).style("cursor", "default");
 					const tooltip = d3.select("#tooltip");
 					tooltip.style("visibility", "hidden")
+					// const itemsNotOneStepAway = sortedLinks
+					// 	.filter(link => link.source != d.internal_id)
+					// 	.map(link => link.target);
+					// d3.selectAll(".item-chart")
+					// 	.data(itemsNotOneStepAway)
+					// 	.attr("opacity", "1")
 				})
 				.on("mouseover", function (d) {
 					d3.select(this).style("cursor", "pointer");
 					// Tooltip
 					const tooltip = d3.select("#tooltip");
 					tooltip.html(() => `<h4>${d.identifier} (${d.type ? d.type.identifier : ""})</h4>
-						<div style="padding-bottom: 10px">${d.description}</div>
+						<label>${d.description}</label>
 						<h5>Link Analysis</h5>`)
+						// .style("left", (d3.event.pageX + 300) + "px")
+						// .style("top", (d3.event.pageY - 300) + "px")
+						.style("top", "55px")
+						.style("right", 0)
 						.style("visibility", "visible")
-						.style("left", (d3.event.pageX + 30) + "px")
-						.style("top", (d3.event.pageY - 30) + "px")
-						.style("border", "solid 1px #aaa")
-						.style("border-radius", "8px")
-						.style("padding", "8px");
 					// Get all links for this item.
 					const thisItemlinks = links
 						.filter(sortedLink => {
@@ -2329,7 +2415,7 @@ let visualise = (async () => {
 						.attr("width", 500)
 						.attr("height", (linkTypesInUse.length * 30) + 20)
 					svg
-						.append("g");
+						.append("g")
 
 
 					// set the ranges
@@ -2339,7 +2425,7 @@ let visualise = (async () => {
 							return uniqueConnectors[connector ? connector.internal_id : 0];
 						})])
 
-					console.log("Height = " + svg.attr("height"))
+					//console.log("Height = " + svg.attr("height"))
 					const y = d3.scaleBand()
 						.range([0, (linkTypesInUse.length * 30)])
 						.padding(0.1)
@@ -2380,6 +2466,7 @@ let visualise = (async () => {
 					// Animation
 				})
 				.on("click", d => {
+					console.log("Item click");
 					const pendingLink = document.querySelector(".link");
 					if (pendingLink == null) {
 						currentItemWithContextMenu = d;
@@ -2387,19 +2474,69 @@ let visualise = (async () => {
 							.attr("transform", `translate(${d.x}, ${d.y})`)
 							.style("visibility", "visible")
 						simulation.stop();
+						// const sonarColour = currentItemWithContextMenu.type? currentItemWithContextMenu.type.colour : 0;
+						// for (let i = 1; i < 4; ++i) {
+						// 	// d3.selectAll(".item-chart").filter(data => data.internal_id == d.internal_id)
+						// 	sonar = d3.selectAll("#drawingArea")
+						// 		.append("circle")
+						// 		.lower()
+						// 		.attr("class", "ripple")
+						// 		.attr("r", displayOptions.itemRadius)
+						// 		.style("stroke", sonarColour)
+						// 		.style("stroke-width", 5 / (i))
+						// 		.attr("cx", currentItemWithContextMenu.x)
+						// 		.attr("cy", currentItemWithContextMenu.y)
+						// 		.transition()
+						// 		.delay(Math.pow(i, 2.5) * 150)
+						// 		.duration(2000)
+						// 		.ease(d3.easeQuad)
+						// 		.attr("r", 150)
+						// 		.style("stroke-opacity", 0)
+						// 		.on("end", function () {
+						// 			d3.select(this).remove();
+						// 		})
+						// }
+						// sonar = null;
+
 					}
 					else {
 						d3.select(".link").remove();
 						itemContextMenu.style("visibility", "hidden")
-						addLink(currentItemWithContextMenu, d).then(() => {
+						addLink(currentItemWithContextMenu, d).then(newLink => {
+							const linkModal = document.getElementById("linkModal");
+							if (linkModal) {
+								document.body.removeChild(linkModal);
+							}
+							document.body.appendChild(linkProperties.setup());
+							linkProperties.view(newLink, links, linkTypes, items, itemTypes, saveNewLink, deleteLink);
+							$('#link-modal').modal();
 							// simulation
 							// 	.items(items)
 							// 	.force("link", d3.forceLink(links).id(d => d.id))
 							update();
-							simulation.alpha(0.005).restart();
-
+							simulation.alpha(0.001).restart();
 						});
 					}
+					// if (traceableLinks != null) {
+					// 	traceableItems = null;
+					// 	traceableLinks = null;
+					// 	update();
+					// 	simulation.alpha(0.001).restart();
+					// }
+					// else if((traceableLinks == null) && (currentItemWithContextMenu != null)) {
+					// 	traceableLinks = sortedLinks
+					// 		.filter(link => (link.source.internal_id == d.internal_id) || (link.target.internal_id == d.internal_id))
+
+					// 	//console.table(traceableLinks.map(link => { return { source: link.source.identifier, target: link.target.identifier } }));
+					// 	const immediateTargetItems = traceableLinks.map(link => link.target);
+					// 	const immediateSourceItems = traceableLinks.map(link => link.source);
+					// 	traceableItems = immediateSourceItems.concat(immediateTargetItems);
+					// 	const test = followLinks(d);
+
+					// 	update();
+					// 	simulation.alpha(0.001).restart();
+					// }
+					d3.event.stopPropagation();
 				})
 				.each(d => {
 					if (d.type) {
@@ -2409,6 +2546,193 @@ let visualise = (async () => {
 					}
 				});
 		}
+		let image = null;
+		// if (displayOptions.showItems) {
+		// 	image = svg
+		// 		.selectAll(".item-image")
+		// 		.data(filteredItems)
+		// 		.join("image")
+		// 		// .join("g")
+		// 		.attr("class", "item-image")
+		// 		.attr("href", d => {
+		// 			return d.custom_image ? ("data:image/png;base64, " + btoa(d.custom_image)) : null;
+		// 		})
+		// 		.attr("width", displayOptions.itemRadius * 1.3)
+		// 		.attr("height", displayOptions.itemRadius * 1.3)
+		// 		//.attr("id", d => "circle_" + d.internal_id)
+		// 		// .append("circle")
+		// 		// .attr("class", "itemCircle")
+		// 		.style("opacity", d => {
+		// 			let opacity = "0.05";
+		// 			if (displayOptions.partialNameCriteria.length > 0) {
+		// 				if ((d.identifier != null) && (d.identifier.toLowerCase().indexOf(displayOptions.partialNameCriteria.toLowerCase()) >= 0)) {
+		// 					opacity = "1";
+		// 				}
+		// 			}
+		// 			else if ((traceableItems != null) && (!traceableItems.some(i => i.internal_id == d.internal_id))) {
+		// 				opacity = "0.05"
+		// 			}
+		// 			else {
+		// 				opacity = "1";
+		// 			}
+		// 			return opacity;
+		// 		})
+		// 		.style("visibility", d => {
+		// 			let visibility = "hidden";
+		// 			if ((displayOptions.filter != null) && (displayOptions.filter.visible != null)) {
+		// 				if (displayOptions.filter.visible.types.filter(item => (d.type != null) && (item == d.type.internal_id)).length > 0) {
+		// 					visibility = "visible";
+		// 				}
+		// 			}
+		// 			else {
+		// 				// Default "All" filter selected.
+		// 				visibility = "visible";
+		// 			}
+		// 			return visibility;
+		// 		})
+		// 		.call(drag(simulation))
+		// 		.on("mouseenter", function (d) {
+		// 			d3.select(this).transition(750).attr("r", (displayOptions.itemRadius * 2));
+		// 			// Call "update" here.
+		// 			// d3.selectAll(".item-chart")
+		// 			// 	.data(items.filter(item => immediateItems.some(i => i.internal_id != item.internal_id)))
+		// 			// 	.attr("opacity", "0")
+		// 		})
+		// 		.on("mouseout", function (d) {
+		// 			d3.select(this).transition(750).attr("r", displayOptions.itemRadius);
+		// 			d3.select(this).style("cursor", "default");
+		// 			const tooltip = d3.select("#tooltip");
+		// 			tooltip.style("visibility", "hidden")
+		// 			// const itemsNotOneStepAway = sortedLinks
+		// 			// 	.filter(link => link.source != d.internal_id)
+		// 			// 	.map(link => link.target);
+		// 			// d3.selectAll(".item-chart")
+		// 			// 	.data(itemsNotOneStepAway)
+		// 			// 	.attr("opacity", "1")
+		// 		})
+		// 		.on("mouseover", function (d) {
+		// 			d3.select(this).style("cursor", "pointer");
+		// 			// Tooltip
+		// 			const tooltip = d3.select("#tooltip");
+		// 			tooltip.html(() => `<h4>${d.identifier} (${d.type ? d.type.identifier : ""})</h4>
+		// 				<label>${d.description}</label>
+		// 				<h5>Link Analysis</h5>`)
+		// 				// .style("left", (d3.event.pageX + 300) + "px")
+		// 				// .style("top", (d3.event.pageY - 300) + "px")
+		// 				.style("top", "55px")
+		// 				.style("right", 0)
+		// 				.style("visibility", "visible")
+		// 			// Get all links for this item.
+		// 			const thisItemlinks = links
+		// 				.filter(sortedLink => {
+		// 					const targetFound = sortedLink.target ? sortedLink.target.internal_id == d.internal_id : false;
+		// 					const sourceFound = sortedLink.source ? sortedLink.source.internal_id == d.internal_id : false;
+		// 					return targetFound || sourceFound;
+		// 				});
+		// 			// const itemLinks = sortedLinks.filter(link => link.source.internal_id == d.internal_id || link.target.internal_id == d.internal_id);
+
+
+		// 			const nonUniqueconnectors = thisItemlinks.map(link => link.connector);
+		// 			const linkTypesInUse = [...new Set(nonUniqueconnectors)];
+
+		// 			function countDuplicates(obj, num) {
+		// 				obj[num] = (++obj[num] || 1);
+		// 				return obj;
+		// 			}
+		// 			const uniqueConnectors = nonUniqueconnectors.map(connector => connector ? connector.internal_id : 0).reduce(countDuplicates, {});
+
+		// 			const svg = tooltip.append("svg")
+		// 				.attr("width", 500)
+		// 				.attr("height", (linkTypesInUse.length * 30) + 20)
+		// 			svg
+		// 				.append("g")
+
+
+		// 			// set the ranges
+		// 			const x = d3.scaleLinear()
+		// 				.range([0, 300])
+		// 				.domain([0, d3.max(linkTypesInUse, connector => {
+		// 					return uniqueConnectors[connector ? connector.internal_id : 0];
+		// 				})])
+
+		// 			//console.log("Height = " + svg.attr("height"))
+		// 			const y = d3.scaleBand()
+		// 				.range([0, (linkTypesInUse.length * 30)])
+		// 				.padding(0.1)
+		// 				.domain(linkTypesInUse.map(linkType => linkType ? linkType.internal_id : 0));
+
+		// 			// append the rectangles for the bar chart
+		// 			svg.selectAll(".bar")
+		// 				.data(linkTypesInUse)
+		// 				.enter().append("rect")
+		// 				.attr("class", "bar")
+		// 				.attr("stroke", d => d ? d.colour : "")
+		// 				.attr("fill", d => d ? d.colour : "")
+		// 				.attr("y", d => y(d ? d.internal_id : 0))
+		// 				.attr("height", y.bandwidth())
+		// 				.attr("transform", "translate(110, 0)")
+		// 				.attr("x", d => x(0) + 1)
+		// 				.transition()
+		// 				.duration(800)
+		// 				.attr("width", d => x(uniqueConnectors[d ? d.internal_id : 0]))
+
+		// 			const yAxis = d3.axisLeft(y)
+		// 				.tickFormat((d, i) => {
+		// 					const linkType = linkTypesInUse.find(linkTypeInUse => linkTypeInUse ? linkTypeInUse.internal_id == d : false);
+
+		// 					return linkType ? linkType.identifier : "Unspecified";
+		// 				});
+
+		// 			svg.append("g")
+		// 				.attr("transform", "translate(110, 0)")
+		// 				.call(yAxis);
+		// 			svg.append("g")
+		// 				.attr("transform", `translate(110, ${(linkTypesInUse.length * 30)})`)
+		// 				.call(d3.axisBottom(x).tickFormat(num => Math.floor(num) == num ? num : null))
+		// 				.selectAll("text")
+		// 				//   .attr("transform", "translate(-10,0)rotate(-45)")
+		// 				.style("text-anchor", "end");
+
+		// 			// Animation
+		// 		})
+		// 		.on("click", d => {
+		// 			console.log("Image click");
+		// 			const pendingLink = document.querySelector(".link");
+		// 			if (pendingLink == null) {
+		// 				currentItemWithContextMenu = d;
+		// 				itemContextMenu
+		// 					.attr("transform", `translate(${d.x}, ${d.y})`)
+		// 					.style("visibility", "visible")
+		// 				simulation.stop();
+		// 			}
+		// 			else {
+		// 				d3.select(".link").remove();
+		// 				itemContextMenu.style("visibility", "hidden")
+		// 				addLink(currentItemWithContextMenu, d).then(newLink => {
+		// 					const linkModal = document.getElementById("linkModal");
+		// 					if (linkModal) {
+		// 						document.body.removeChild(linkModal);
+		// 					}
+		// 					document.body.appendChild(linkProperties.setup());
+		// 					linkProperties.view(newLink, links, linkTypes, items, itemTypes, saveNewLink, deleteLink);
+		// 					$('#link-modal').modal();
+		// 					// simulation
+		// 					// 	.items(items)
+		// 					// 	.force("link", d3.forceLink(links).id(d => d.id))
+		// 					update();
+		// 					simulation.alpha(0.001).restart();
+		// 				});
+		// 			}
+		// 			d3.event.stopPropagation();
+		// 		})
+		// 		.each(d => {
+		// 			if (d.type) {
+		// 				if (document.getElementById(`radialGradient_${d.type.internal_id}`) == null) {
+		// 					setupRadialGradientFilter(`radialGradient_${d.type.internal_id}`, d.type ? d.type.colour : "");
+		// 				}
+		// 			}
+		// 		});
+		// }
 		const infoDisplay = document.getElementById("info");
 		infoDisplay.innerHTML = `Items: ${items.length}, Links: ${links.length}.`;
 
@@ -2434,11 +2758,23 @@ let visualise = (async () => {
 					.attr("cx", d => d.x)
 					.attr("cy", d => d.y)
 			}
+			if (sonar != null) {
+				sonar
+					.attr("cx", d => d.x)
+					.attr("cy", d => d.y)
+			}
+
 			if (drawnHeatmapItems != null) {
 				drawnHeatmapItems
 					.attr("cx", d => d.x)
 					.attr("cy", d => d.y)
 			}
+			if (image != null) {
+				image
+					.attr("x", d => d.x - displayOptions.itemRadius + 5)
+					.attr("y", d => d.y - displayOptions.itemRadius - 5)
+			}
+
 			if (text != null) {
 				text
 					.attr("x", d => d.x)
@@ -2523,6 +2859,13 @@ let visualise = (async () => {
 					.attr("x2", legendItemWidth - 15)
 					.attr("y2", (d, i) => { return (legendItemHeight * (i + 1) + legendCaptionHeight); })
 					.style("stroke", d => (d ? d.colour : "gainsboro"))
+					.attr("stroke-dasharray", d => {
+						let dash = null;
+						if (d && d.dash) {
+							dash = dashesAndEnds.dash.find(dash => dash.name == d.dash);
+						}
+						return dash ? (dash.on + " " + dash.off) : null
+					})
 					.style("stroke-width", 4)
 					.attr('marker-end', d => (d ? `url(#legendMarker_${d.colour.substring(1)}${d.marker})` : ""))
 					.each(d => { if (d) { createMarkerEnd("legendMarker_", dashesAndEnds, d.marker, d.colour, "5px", "5px", 0, 0); } })
@@ -2569,11 +2912,11 @@ let visualise = (async () => {
 		console.log("change!" + event.currentTarget.value);
 		displayOptions.partialNameCriteria = event.currentTarget.value;
 		update();
-		simulation.alpha(0.005).restart();
+		simulation.alpha(0.001).restart();
 	}
 	const setupInputEventHandlers = () => {
 		const searchInput = document.getElementById("searchInput");
-		console.log("setting up keyup handler.")
+		//console.log("setting up keyup handler.")
 		searchInput.addEventListener("keyup", event => searchInputEventHandler(event))
 
 		const predefinedfilters = document.getElementById("predefinedfilters");
@@ -2581,10 +2924,10 @@ let visualise = (async () => {
 			const activeProject = await projectsDB.getActive();
 			filtersDB.load(activeProject.internal_id).then(async results => {
 				const filter = results.find(f => f.internal_id == event.srcElement.value);
-				console.log("Updating chart.")
+				//console.log("Updating chart.")
 				displayOptions.filter = filter;
 				update();
-				simulation.alpha(0.005).restart();
+				simulation.alpha(0.001).restart();
 			});
 		});
 		const searchClear = document.getElementById("search-clear");
@@ -2593,7 +2936,7 @@ let visualise = (async () => {
 				event.currentTarget.value = "";
 				searchInputEventHandler(event);
 				update();
-				simulation.alpha(0.005).restart();
+				simulation.alpha(0.001).restart();
 			});
 		}
 
@@ -2601,8 +2944,15 @@ let visualise = (async () => {
 			if (event.key == "Escape") {
 				// Clear any pending links.
 				d3.select(".link").remove();
-				// Hide the item context menu .
-				itemContextMenu.style("visibility", "hidden")
+				if (traceFromItem != null) {
+					traceFromItem = null;
+					update();
+					simulation.alpha(0.001).restart();
+				}
+				if (itemContextMenu) {
+					// Hide the item context menu .
+					itemContextMenu.style("visibility", "hidden");
+				}
 			}
 		})
 		document.addEventListener("keydown", event => {
@@ -2720,17 +3070,25 @@ let visualise = (async () => {
 		// append gaussian blur to filter
 		const radialGradient = defs.append('radialGradient')
 			.attr('id', id) /// !!! important - define id to reference it later
-			.attr('fx', '0.5')
-			.attr('fy', "0.5") // !!! important parameter - blur
+			.attr('fx', '0.45')
+			.attr('fy', "0.45") // !!! important parameter - blur
+			.attr('cx', '0.06')
+			.attr('cy', "0.06") // !!! important parameter - blur
 			.attr('r', '1');
+		// radialGradient.append("stop")
+		// 	.style("stop-opacity", "1")
+		// 	.attr("offset", "0%")
+		// 	.style("stop-color", "#ffffff");
+		// radialGradient.append("stop")
+		// 	.style("stop-opacity", "0")
+		// 	.attr("offset", "100%")
+		// 	.style("stop-color", colour);
 		radialGradient.append("stop")
-			.style("stop-opacity", "1")
-			.attr("offset", "0%")
+			.attr("offset", "10%")
+			.attr("stop-color", "#ffffff");
+		radialGradient.append("stop")
+			.attr("offset", "90%")
 			.style("stop-color", colour);
-		radialGradient.append("stop")
-			.style("stop-opacity", "0")
-			.attr("offset", "60%")
-			.style("stop-color", "#ffffff");
 
 
 	}
@@ -2822,19 +3180,6 @@ const filters = (async () => {
 		const exportButton = document.getElementById("exportFiltersButton");
 		exportButton.addEventListener("click", event => exportFilters());
 
-		const typeSortOrderAction = document.getElementById("filter-type-sort-order");
-		typeSortOrderAction.addEventListener("click", event => {
-			if (event.currentTarget.dataset.sortOrder == "ascending") {
-				sortOrder = (b, a) => ('' + a.type.identifier).localeCompare(b.type.identifier);
-				event.currentTarget.dataset.sortOrder = "descending";
-			}
-			else {
-				sortOrder = (a, b) => ('' + a.type.identifier).localeCompare(b.type.identifier);
-				event.currentTarget.dataset.sortOrder = "ascending";
-			}
-			list();
-		});
-
 		const identifierSortOrderAction = document.getElementById("filter-identifier-sort-order");
 		identifierSortOrderAction.addEventListener("click", event => {
 			if (event.currentTarget.dataset.sortOrder == "ascending") {
@@ -2893,7 +3238,6 @@ const filters = (async () => {
 	const getRowHTML = (filter) => {
 		return `
 			<tr data-internal_id="${filter.internal_id}" data-toggle="modal" data-target="#filter-modal" class="item-row">
-				<td>${(filter.type == null) ? "" : filter.type.identifier}</td>
 				<td><nobr>${filter.identifier}</nobr></td>
 				<td>${filter.description}</td>
 				<td>${((filter.updated == null) ? "" : filter.updated.toString().substring(4, filter.updated.toString().indexOf(" G")))}</td>

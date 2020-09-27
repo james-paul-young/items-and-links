@@ -73,10 +73,10 @@
 			<!-- </form> -->
 		</nav>
 	</header>
-	<main style="padding-left: 10px; padding-right: 10px;">
+	<main>
 		<!-- Tab panes -->
 		<div class="tab-content">
-			<div class="tab-pane active fade-in" id="projects" role="tabpanel" aria-labelledby="projects-tab">
+			<div class="tab-pane active fade-in items-page" id="projects" role="tabpanel" aria-labelledby="projects-tab">
 				<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3">
 					<h2>Projects</h2>
 					<div class="btn-toolbar mb-2 mb-md-0">
@@ -91,7 +91,7 @@
 					</div>
 				</div>
 				<div class="table-responsive">
-					<table id="projectsTable" class="table table-hover ">
+					<table id="projectsTable" class="table table-hover items-list">
 						<thead>
 							<tr class="red">
 								<th><a id="project-active-sort-order" href="#" title="Active order">Active</a></th>
@@ -106,7 +106,7 @@
 					</table>
 				</div>
 			</div>
-			<div class="tab-pane fade-in" id="items" role="tabpanel" aria-labelledby="items-tab">
+			<div class="tab-pane fade-in items-page" id="items" role="tabpanel" aria-labelledby="items-tab">
 				<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3">
 					<h2>Items (<label id="items-active-project"></label>)</h2>
 					<div class="btn-toolbar mb-2 mb-md-0">
@@ -118,7 +118,7 @@
 						</div>
 					</div>
 				</div>
-				<table id="items-table" class="table table-hover">
+				<table id="items-table" class="table table-hover items-list">
 					<thead>
 						<tr>
 							<th><a id="item-type-sort-order" href="#" title="Sort order">Type</a></th>
@@ -130,7 +130,7 @@
 					<tbody></tbody>
 				</table>
 			</div>
-			<div class="tab-pane fade-in" id="item-types" role="tabpanel" aria-labelledby="item-types-tab">
+			<div class="tab-pane fade-in items-page" id="item-types" role="tabpanel" aria-labelledby="item-types-tab">
 				<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3">
 					<h2>Item Types (<label id="item-types-active-project"></label>)</h2>
 					<div class="btn-toolbar mb-2 mb-md-0">
@@ -142,7 +142,7 @@
 						</div>
 					</div>
 				</div>
-				<table id="item-types-table" class="table table-hover">
+				<table id="item-types-table" class="table table-hover items-list">
 					<thead>
 						<tr>
 							<th><a id="item-type-identifier-sort-order" href="#" title="Sort order">Identifier</a></th>
@@ -154,7 +154,7 @@
 					<tbody></tbody>
 				</table>
 			</div>
-			<div class="tab-pane fade-in" id="links" role="tabpanel" aria-labelledby="links-tab">
+			<div class="tab-pane fade-in items-page" id="links" role="tabpanel" aria-labelledby="links-tab">
 				<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3">
 					<h2>Links (<label id="links-active-project"></label>)</h2>
 					<div class="btn-toolbar mb-2 mb-md-0">
@@ -166,7 +166,7 @@
 						</div>
 					</div>
 				</div>
-				<table id="links-table" class="table table-hover">
+				<table id="links-table" class="table table-hover items-list">
 					<thead>
 						<tr>
 							<th><a id="link-identifier-sort-order" href="#" title="Sort order">Identifier</a></th>
@@ -180,7 +180,7 @@
 					<tbody></tbody>
 				</table>
 			</div>
-			<div class="tab-pane fade-in" id="link-types" role="tabpanel" aria-labelledby="link-types-tab">
+			<div class="tab-pane fade-in items-page" id="link-types" role="tabpanel" aria-labelledby="link-types-tab">
 				<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3">
 					<h2>Link Types (<label id="link-types-active-project"></label>)</h2>
 					<div class="btn-toolbar mb-2 mb-md-0">
@@ -192,7 +192,7 @@
 						</div>
 					</div>
 				</div>
-				<table id="link-types-table" class="table table-hover">
+				<table id="link-types-table" class="table table-hover items-list">
 					<thead>
 						<tr>
 							<th><a id="link-type-identifier-sort-order" href="#" title="Sort order">Identifier</a></th>
@@ -204,7 +204,7 @@
 					<tbody></tbody>
 				</table>
 			</div>
-			<div class="tab-pane fade-in" id="filters" role="tabpanel" aria-labelledby="filters-tab">
+			<div class="tab-pane fade-in items-page" id="filters" role="tabpanel" aria-labelledby="filters-tab">
 				<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-filters-center pt-3 pb-2 mb-3">
 					<h2>Filters (<label id="filters-active-project"></label>)</h2>
 					<div class="btn-toolbar mb-2 mb-md-0">
@@ -216,10 +216,9 @@
 						</div>
 					</div>
 				</div>
-				<table id="filters-table" class="table table-hover">
+				<table id="filters-table" class="table table-hover items-list">
 					<thead>
 						<tr>
-							<th><a id="filter-type-sort-order" href="#" title="Sort order">Type</a></th>
 							<th><a id="filter-identifier-sort-order" href="#" title="Sort order">Identifier</a></th>
 							<th><a id="filter-description-sort-order" href="#" title="Sort order">Description</a></th>
 							<th><a id="filter-updated-sort-order" href="#" title="Sort order">Updated</a></th>
