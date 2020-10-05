@@ -154,6 +154,11 @@ const projects = (async () => {
 		load().then(async result => {
 			await projectsDB.activate(importedProject);
 			list();
+			const definedFiltersHTML = importedfilters
+				.sort((a, b) => a.identifier.localeCompare(b.identifier))
+				.map(filter => `<option title="${filter.description}" value="${filter.internal_id}">${filter.identifier}</option>`);
+			const predefinedfilters = document.getElementById("predefinedfilters");
+			predefinedfilters.innerHTML = `<option value = "">All</option>` + definedFiltersHTML.join("");
 		});
 	}
 	const setupEventHandlers = () => {
@@ -176,6 +181,7 @@ const projects = (async () => {
 		createProjectFromFileButton.addEventListener("click", event => {
 			const inputFileDialog = document.createElement("input");
 			inputFileDialog.type = "file";
+			inputFileDialog.accept = ".json"
 			inputFileDialog.addEventListener("change", event => {
 				console.log(event);
 				var importFile = event.target.files[0];
@@ -502,10 +508,10 @@ const items = (async () => {
 	const getRowHTML = (item) => {
 		return `
 			<tr data-internal_id="${item.internal_id}" data-toggle="modal" data-target="#item-modal" class="item-row">
-				<td><svg id="svg_${item.internal_id}" class="item-type-list"></svg> ${(item.type == null) ? "" : item.type.identifier}</td>
+				<td><nobr><svg id="svg_${item.internal_id}" class="item-type-list"></svg> ${(item.type == null) ? "" : item.type.identifier}</nobr></td>
 				<td><nobr>${item.identifier}</nobr></td>
 				<td>${item.description}</td>
-				<td>${((item.updated == null) ? "" : item.updated.toString().substring(4, item.updated.toString().indexOf(" G")))}</td>
+				<td><nobr>${((item.updated == null) ? "" : item.updated.toString().substring(4, item.updated.toString().indexOf(" G")))}</nobr></td>
 			</tr>
 		`
 	};
@@ -1512,7 +1518,7 @@ const linkTypes = (async () => {
 	setupEventHandlers();
 })();
 
-let visualise = (async () => {
+const visualise = (async () => {
 	let links = null, unmappedLinks = null, linkTypes = null, items = null, itemTypes = null, displayOptions = null, simulation = null, traceFromItem = null;
 	let heatmapItems = null;
 	let drawnHeatmapItems = null;
@@ -1904,7 +1910,9 @@ let visualise = (async () => {
 			.on("click", function (d) {
 				switch (d.data.value.action) {
 					case "Delete": {
-						deleteItem(currentItemWithContextMenu, null, items, links, itemTypes);
+						if (window.confirm("Delete selected item?")) {
+							deleteItem(currentItemWithContextMenu, null, items, links, itemTypes);
+						}
 						break;
 					}
 					case "Add": {
@@ -3315,3 +3323,4 @@ const filters = (async () => {
 	};
 	setupEventHandlers();
 })();
+
