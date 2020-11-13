@@ -1,22 +1,63 @@
+const updateProgress = (value, description) => {
+	const progressBarContainer = document.getElementById("progressBarContainer");
+	progressBarContainer.classList.remove("progress-hidden");
+	progressBarContainer.classList.add("progress-visible");
+	const progressBar = document.getElementById("progressBar");
+	progressBar.innerHTML = description;
+	progressBar.style.width = `${value}%`;
+	if (value == 100) {
+		progressBarContainer.classList.add("progress-hidden");
+		progressBarContainer.classList.remove("progress-visible");
+	}
+}
+
 (async () => {
 	// Check if the database needs creation or updating.
 	const checkDatabase = () => {
 		return new Promise((resolve, reject) => {
-			dbName = "thingdb";
-			dbVersion = 9;
-
 			const request = indexedDB.open(dbName, dbVersion);
 			request.onupgradeneeded = (event) => {
 				// console.table("Upgrade needed.");
 				const db = event.target.result;
-				if (event.oldVersion < dbVersion) {
+				if (event.oldVersion < 1) {
 					// Create a thing ObjectStore for this database
-					db.createObjectStore("thing", { keyPath: "internal_id" });
-					db.createObjectStore("type", { keyPath: "internal_id" });
-					db.createObjectStore("connector", { keyPath: "internal_id" });
-					db.createObjectStore("connection", { keyPath: "internal_id" });
+					const thingObjectStore = db.createObjectStore("thing", { keyPath: "internal_id" });
+					thingObjectStore.createIndex("project_id", "project_id", { unique: false, })
+
+					const typeObjectStore = db.createObjectStore("type", { keyPath: "internal_id" });
+					typeObjectStore.createIndex("project_id", "project_id", { unique: false, })
+
+					const connectorObjectStore = db.createObjectStore("connector", { keyPath: "internal_id" });
+					connectorObjectStore.createIndex("project_id", "project_id", { unique: false, })
+
+					const connectionObjectStore = db.createObjectStore("connection", { keyPath: "internal_id" });
+					connectionObjectStore.createIndex("project_id", "project_id", { unique: false, })
+
 					db.createObjectStore("project", { keyPath: "internal_id" });
-					db.createObjectStore("filter", { keyPath: "internal_id" });
+
+					const filterObjectStore = db.createObjectStore("filter", { keyPath: "internal_id" });
+					filterObjectStore.createIndex("project_id", "project_id", { unique: false, })
+
+				}
+				if (event.oldVersion < dbVersion) {
+					const upgradeTransaction = event.target.transaction;
+
+					// Create a thing ObjectStore for this database
+					const thingObjectStore = upgradeTransaction.objectStore("thing");
+					thingObjectStore.createIndex("project_id", "project_id", { unique: false, })
+
+					const typeObjectStore = upgradeTransaction.objectStore("type");
+					typeObjectStore.createIndex("project_id", "project_id", { unique: false, })
+
+					const connectorObjectStore = upgradeTransaction.objectStore("connector");
+					connectorObjectStore.createIndex("project_id", "project_id", { unique: false, })
+
+					const connectionObjectStore = upgradeTransaction.objectStore("connection");
+					connectionObjectStore.createIndex("project_id", "project_id", { unique: false, })
+
+					const filterObjectStore = upgradeTransaction.objectStore("filter");
+					filterObjectStore.createIndex("project_id", "project_id", { unique: false, })
+
 					resolve();
 				}
 			};
@@ -131,34 +172,63 @@ const projects = (async () => {
 		exportJSON.click();
 	};
 	const importProjectFromFile = projectJSON => {
+		const savePromiseArray = [];
+		const deletePromiseArray = [];
 		const parsedJSON = JSON.parse(projectJSON);
 		const importedProject = parsedJSON.project;
-		projectsDB.save(importedProject);
 
+		updateProgress(0, "Reading Project file...");
+
+		//projectsDB.delete(importedProject.internal_id);
+		//projectsDB.save(importedProject);
+		deletePromiseArray.push(projectsDB.delete(importedProject.internal_id));
+		savePromiseArray.push(projectsDB.save(importedProject))
+
+		deletePromiseArray.push(itemsDB.deleteAll(importedProject.internal_id));
 		const importedItems = parsedJSON.items;
-		importedItems.forEach(importedItem => itemsDB.save(importedItem));
-
+		importedItems.forEach(importedItem => {
+			savePromiseArray.push(itemsDB.save(importedItem));
+		});
+		deletePromiseArray.push(itemTypesDB.deleteAll(importedProject.internal_id));
 		const importedItemTypes = parsedJSON.itemTypes;
-		importedItemTypes.forEach(importedItemType => itemTypesDB.save(importedItemType));
+		importedItemTypes.forEach(importedItemType => {
+			savePromiseArray.push(itemTypesDB.save(importedItemType));
+		});
 
+		deletePromiseArray.push(linksDB.deleteAll(importedProject.internal_id));
 		const importedLinks = parsedJSON.links;
-		importedLinks.forEach(importedLink => linksDB.save(importedLink));
+		importedLinks.forEach(importedLink => {
+			savePromiseArray.push(linksDB.save(importedLink));
+		});
 
+		deletePromiseArray.push(linkTypesDB.deleteAll(importedProject.internal_id));
 		const importedLinkTypes = parsedJSON.linkTypes;
-		importedLinkTypes.forEach(importedLinkType => linkTypesDB.save(importedLinkType));
+		importedLinkTypes.forEach(importedLinkType => {
+			savePromiseArray.push(linkTypesDB.save(importedLinkType));
+		});
 
+		deletePromiseArray.push(filtersDB.deleteAll(importedProject.internal_id));
 		const importedfilters = parsedJSON.filters;
-		importedfilters.forEach(importedFilter => filtersDB.save(importedFilter));
+		importedfilters.forEach(importedFilter => {
+			savePromiseArray.push(filtersDB.save(importedFilter));
+		});
 
-		console.log(JSON.parse(projectJSON));
-		load().then(async result => {
-			await projectsDB.activate(importedProject);
-			list();
-			const definedFiltersHTML = importedfilters
-				.sort((a, b) => a.identifier.localeCompare(b.identifier))
-				.map(filter => `<option title="${filter.description}" value="${filter.internal_id}">${filter.identifier}</option>`);
-			const predefinedfilters = document.getElementById("predefinedfilters");
-			predefinedfilters.innerHTML = `<option value = "">All</option>` + definedFiltersHTML.join("");
+
+		updateProgress(33, "Clearing any previous project data with same project ID...");
+		Promise.allSettled(deletePromiseArray).then(results => {
+			updateProgress(66, "Loading project...");
+			Promise.allSettled(savePromiseArray).then(results => {
+				updateProgress(100, "Project loaded.");
+				load().then(async result => {
+					await projectsDB.activate(importedProject);
+					list();
+					const definedFiltersHTML = importedfilters
+						.sort((a, b) => a.identifier.localeCompare(b.identifier))
+						.map(filter => `<option title="${filter.description}" value="${filter.internal_id}">${filter.identifier}</option>`);
+					const predefinedfilters = document.getElementById("predefinedfilters");
+					predefinedfilters.innerHTML = `<option value = "">All</option>` + definedFiltersHTML.join("");
+				});
+			});
 		});
 	}
 	const setupEventHandlers = () => {
@@ -183,7 +253,7 @@ const projects = (async () => {
 			inputFileDialog.type = "file";
 			inputFileDialog.accept = ".json"
 			inputFileDialog.addEventListener("change", event => {
-				console.log(event);
+//				console.log(event);
 				var importFile = event.target.files[0];
 				if (importFile != null) {
 					const fileReader = new FileReader();
@@ -414,8 +484,13 @@ const items = (async () => {
 		const tabLink = document.getElementById("items-tab");
 		console.assert(tabLink != null, "Cannot find items-tab");
 		tabLink.addEventListener("click", event => {
+			updateProgress(33, "Loading Items...");
 			load().then(result => {
-				list();
+				updateProgress(66, "Listing Items...");
+				list().then(() => {
+					updateProgress(100, "Items loaded.");
+				});
+
 			});
 		});
 
@@ -675,8 +750,13 @@ const itemTypes = (async () => {
 		const tabLink = document.getElementById("item-types-tab");
 		console.assert(tabLink != null, "Cannot find item-types-tab");
 		tabLink.addEventListener("click", event => {
+			updateProgress(33, "Loading Items...");
 			load().then(result => {
-				list();
+				updateProgress(66, "Listing Items...");
+				list().then(() => {
+					updateProgress(100, "Items loaded.");
+				});
+
 			});
 		});
 
@@ -948,8 +1028,13 @@ const links = (async () => {
 		const tabLink = document.getElementById("links-tab");
 		console.assert(tabLink != null, "Cannot find links-tab");
 		tabLink.addEventListener("click", event => {
+			updateProgress(33, "Loading Links...");
 			load().then(result => {
-				list();
+				updateProgress(66, "Listing Links...");
+				list().then(() => {
+					updateProgress(100, "Links loaded.");
+				});
+
 			});
 		});
 
@@ -1349,8 +1434,13 @@ const linkTypes = (async () => {
 		const tabLink = document.getElementById("link-types-tab");
 		console.assert(tabLink != null, "Cannot find link-types-tab");
 		tabLink.addEventListener("click", event => {
+			updateProgress(33, "Loading Link Types...");
 			load().then(result => {
-				list();
+				updateProgress(66, "Listing Link Types...");
+				list().then(() => {
+					updateProgress(100, "Link Types loaded.");
+				});
+
 			});
 		});
 
@@ -1873,7 +1963,7 @@ const visualise = (async () => {
 		itemContextMenu.selectAll("itemContextMenu")
 			.data(data_ready)
 			.join('text')
-			.attr("class", "fas icon labelName")
+			.attr("class", "fas icon context-label")
 			.attr('d', arc2)
 			.attr('transform', d => {
 				let pos = arc2.centroid(d);
@@ -1974,6 +2064,9 @@ const visualise = (async () => {
 	const setupSimulation = (width, height) => {
 		d3.select("#viewBox").remove();
 		const parentSVG = d3.select("#chart").append("svg")
+			.attr("version", "1.1")
+			.attr("baseProfile", "full")
+			.attr("xmlns", "http://www.w3.org/2000/svg")
 			.attr("viewBox", [0, 0, width, height - 105])
 			.call(d3.zoom().on("zoom", () => {
 				const svg = d3.select("#drawingArea");
@@ -2210,7 +2303,7 @@ const visualise = (async () => {
 					d3.select(this).style("cursor", "pointer");
 				})
 				.on("click", function (d) {
-					const linkModal = document.getElementById("linkModal");
+					const linkModal = document.getElementById("link-modal");
 					if (linkModal) {
 						document.body.removeChild(linkModal);
 					}
@@ -2398,6 +2491,7 @@ const visualise = (async () => {
 						// .style("left", (d3.event.pageX + 300) + "px")
 						// .style("top", (d3.event.pageY - 300) + "px")
 						.style("top", "55px")
+						.style("max-width", "600px")
 						.style("right", 0)
 						.style("visibility", "visible")
 					// Get all links for this item.
@@ -3177,8 +3271,13 @@ const filters = (async () => {
 		const tabLink = document.getElementById("filters-tab");
 		console.assert(tabLink != null, "Cannot find filters-tab");
 		tabLink.addEventListener("click", event => {
+			updateProgress(33, "Loading Filters...");
 			load().then(result => {
-				list();
+				updateProgress(66, "Listing Filters...");
+				list().then(() => {
+					updateProgress(100, "Filters loaded.");
+				});
+
 			});
 		});
 
@@ -3297,7 +3396,7 @@ const filters = (async () => {
 		}
 		return filtersList;
 	}
-	const list = () => {
+	const list = async () => {
 		const curatedFiltersList = curatedList();
 		if (curatedFiltersList != null) {
 			const html = curatedFiltersList

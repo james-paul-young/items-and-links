@@ -25,6 +25,7 @@
   }
 .item-row {
 	cursor: pointer;
+	content-visibility: auto;
 }
 
 .item-row svg {
@@ -65,7 +66,9 @@
 	stroke: black;
 }
 
-
+.context-label {
+	font-size: larger;
+}
 .fade-in {
 	animation: fadeIn ease 0.25s;
 	-webkit-animation: fadeIn ease 0.25s;
@@ -145,3 +148,14 @@
 		stroke: black;
 	  }
 	  
+	  .progress-hidden {
+		/*visibility: hidden;*/
+		opacity: 0;
+		transition: opacity 2s linear 0.5s;
+	  }
+	  .progress-visible {
+		/* visibility: visible; */
+		opacity: 1;
+		transition: opacity 0s 0.2s linear 0.2s;
+	  }
+	

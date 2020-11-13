@@ -1,4 +1,7 @@
 "use strict";
+const dbVersion = 10;
+const dbName = "thingdb";
+
 const projectsDB = {
 	makeid: (length) => {
 		var result = '';
@@ -20,7 +23,7 @@ const projectsDB = {
 			}
 			// Get the currently active project.
 			const indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
-			const openDBRequest = indexedDB.open("thingdb", 9);
+			const openDBRequest = indexedDB.open(dbName, dbVersion);
 			openDBRequest.onsuccess = (event) => {
 				const db = event.target.result;
 				const loadTransaction = db.transaction(["project"], 'readonly');
@@ -32,7 +35,7 @@ const projectsDB = {
 					//console.table(event.target.result.map(project => {return { internal_id: project.internal_id, identifier: project.identifier}}));
 				};
 				loadRequest.onerror = (event) => {
-					console.log("Error in loading.");
+					//console.log("Error in loading.");
 					reject();
 				}
 				loadRequest.oncomplete = (event) => {
@@ -40,7 +43,7 @@ const projectsDB = {
 				}
 			}
 			openDBRequest.onerror = (event) => {
-				alert("Database error: " + JSON.stringify(event));
+				alert("Project - Database error: " + JSON.stringify(event));
 				reject();
 			};
 		});
@@ -74,13 +77,13 @@ const projectsDB = {
 	save: (project) => {
 		return new Promise((resolve, reject) => {
 			const indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
-			const openDBRequest = indexedDB.open("thingdb", 9);
+			const openDBRequest = indexedDB.open(dbName, dbVersion);
 			openDBRequest.onsuccess = (event) => {
 				const db = event.target.result;
 				const saveTransaction = db.transaction(["project"], "readwrite");
 				// Do something when all the data is added to the database.
 				saveTransaction.oncomplete = (event) => {
-					console.log("Transaction complete: project written!");
+//					console.log("Transaction complete: project written!");
 				};
 				saveTransaction.onerror = (event) => {
 					console.error("project error: " + event);
@@ -117,11 +120,13 @@ const projectsDB = {
 					mergedRecord.internal_id = projectToSave.internal_id;
 				}
 				saveRequest.onsuccess = (event) => {
-					console.log(newRecord ? "project (" + objectStore.internal_id + ") added." : "Updated");
+//					console.log(newRecord ? "project (" + objectStore.internal_id + ") added." : "Updated");
 
 					resolve(mergedRecord);
 				}
-				saveRequest.onerror = (event) => { console.log("project (" + project.internal_id + ") not added."); }
+				saveRequest.onerror = (event) => { 
+				//	console.log("project (" + project.internal_id + ") not added."); 
+				}
 				saveRequest.oncomplete = (event) => {
 					db.close();
 				}
@@ -135,12 +140,12 @@ const projectsDB = {
 	delete: (projectId) => {
 		return new Promise((resolve, reject) => {
 			const indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
-			const openDBRequest = indexedDB.open("thingdb", 9);
+			const openDBRequest = indexedDB.open(dbName, dbVersion);
 			openDBRequest.onsuccess = (event) => {
 				const db = event.target.result;
 				const deleteTransaction = db.transaction(["project"], "readwrite");
 				deleteTransaction.oncomplete = (event) => {
-					console.log("project deleted!");
+//					console.log("project deleted!");
 				};
 				deleteTransaction.onerror = (event) => {
 					console.error("error: " + event);
@@ -149,11 +154,11 @@ const projectsDB = {
 				const projectObjectStore = deleteTransaction.objectStore("project");
 				const deleteRequest = projectObjectStore.delete(projectId);
 				deleteRequest.onsuccess = (event) => {
-					console.log("deleted");
+//					console.log("deleted");
 					resolve();
 				}
 				deleteRequest.onerror = (event) => {
-					console.log("not deleted.");
+					//console.log("not deleted.");
 				}
 				deleteRequest.oncomplete = (event) => {
 					db.close();
@@ -180,19 +185,29 @@ const itemsDB = {
 		return new Promise((resolve, reject) => {
 			// Get the currently active project.
 			const indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
-			const openDBRequest = indexedDB.open("thingdb", 9);
+			const openDBRequest = indexedDB.open(dbName, dbVersion);
 			openDBRequest.onsuccess = (event) => {
 				const db = event.target.result;
 				const loadTransaction = db.transaction(["thing"], 'readonly');
 				const objectStore = loadTransaction.objectStore("thing");
 
-				const loadRequest = objectStore.getAll();
+				const projectIdIndex = objectStore.index("project_id");
+				// const projectBasedCursor = projectIdIndex.openKeyCursor(IDBKeyRange.only(projectId)); //opens all records bearing the selected tag number
+				// projectBasedCursor.onsuccess = (event) => {
+					// const cursor = event.target.result;
+					// if (cursor != null) {
+					// 	cursor.continue();
+					// }
+				// }
+				const loadRequest = projectIdIndex.getAll(projectId);
+				//loadRequest = objectStore.getAll();
 				loadRequest.onsuccess = (event) => {
-					resolve(event.target.result.filter(item => item.project_id == projectId));
+					resolve(event.target.result);
+					//resolve(event.target.result.filter(item => item.project_id == projectId));
 					//console.table(event.target.result.map(item => {return { internal_id: item.internal_id, identifier: item.identifier}}));
 				};
 				loadRequest.onerror = (event) => {
-					console.log("Error in loading.");
+					//console.log("Error in loading.");
 					reject();
 				}
 				loadRequest.oncomplete = (event) => {
@@ -200,7 +215,7 @@ const itemsDB = {
 				}
 			}
 			openDBRequest.onerror = (event) => {
-				alert("Database error: " + JSON.stringify(event));
+				alert("Item - Database error: " + JSON.stringify(event));
 				reject();
 			};
 		});
@@ -209,13 +224,13 @@ const itemsDB = {
 	save: (item) => {
 		return new Promise((resolve, reject) => {
 			const indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
-			const openDBRequest = indexedDB.open("thingdb", 9);
+			const openDBRequest = indexedDB.open(dbName, dbVersion);
 			openDBRequest.onsuccess = (event) => {
 				const db = event.target.result;
 				const saveTransaction = db.transaction(["thing"], "readwrite");
 				// Do something when all the data is added to the database.
 				saveTransaction.oncomplete = (event) => {
-					console.log("Transaction complete: item written!");
+					//console.log("Transaction complete: item written!");
 				};
 				saveTransaction.onerror = (event) => {
 					console.error("item error: " + event);
@@ -224,11 +239,11 @@ const itemsDB = {
 				let saveRequest = null;
 				// Only save what is needed in the db. d3 adds a lot of unneccesary attributes for thedb.
 				let itemTypeInternalId = null;
-				if(typeof(item.type) == "string") {
+				if (typeof (item.type) == "string") {
 					itemTypeInternalId = item.type;
 				}
 				else {
-					itemTypeInternalId = (item.type? item.type.internal_id : null);
+					itemTypeInternalId = (item.type ? item.type.internal_id : null);
 				}
 
 				const itemToSave = {
@@ -264,11 +279,13 @@ const itemsDB = {
 					mergedRecord.internal_id = itemToSave.internal_id;
 				}
 				saveRequest.onsuccess = (event) => {
-					console.log(newRecord ? "item (" + objectStore.internal_id + ") added." : "Updated");
+					//console.log(newRecord ? "item (" + objectStore.internal_id + ") added." : "Updated");
 
 					resolve(mergedRecord);
 				}
-				saveRequest.onerror = (event) => { console.log("item (" + item.internal_id + ") not added."); }
+				saveRequest.onerror = (event) => { 
+					//console.log("item (" + item.internal_id + ") not added."); 
+				}
 				saveRequest.oncomplete = (event) => {
 					db.close();
 				}
@@ -282,12 +299,12 @@ const itemsDB = {
 	delete: (itemId) => {
 		return new Promise((resolve, reject) => {
 			const indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
-			const openDBRequest = indexedDB.open("thingdb", 9);
+			const openDBRequest = indexedDB.open(dbName, dbVersion);
 			openDBRequest.onsuccess = (event) => {
 				const db = event.target.result;
 				const deleteTransaction = db.transaction(["thing"], "readwrite");
 				deleteTransaction.oncomplete = (event) => {
-					console.log("item deleted!");
+					//console.log("item deleted!");
 				};
 				deleteTransaction.onerror = (event) => {
 					console.error("error: " + event);
@@ -296,11 +313,11 @@ const itemsDB = {
 				const itemObjectStore = deleteTransaction.objectStore("thing");
 				const deleteRequest = itemObjectStore.delete(itemId);
 				deleteRequest.onsuccess = (event) => {
-					console.log("deleted");
+					//console.log("deleted");
 					resolve();
 				}
 				deleteRequest.onerror = (event) => {
-					console.log("not deleted.");
+					c//onsole.log("not deleted.");
 				}
 				deleteRequest.oncomplete = (event) => {
 					db.close();
@@ -311,7 +328,42 @@ const itemsDB = {
 				reject();
 			}
 		});
-	}
+	},
+	deleteAll: (projectId) => {
+		return new Promise((resolve, reject) => {
+			const indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
+			const openDBRequest = indexedDB.open(dbName, dbVersion);
+			openDBRequest.onsuccess = (event) => {
+				const db = event.target.result;
+				const deleteTransaction = db.transaction(["thing"], "readwrite");
+				deleteTransaction.oncomplete = (event) => {
+					//console.log("items deleted!");
+				};
+				deleteTransaction.onerror = (event) => {
+					console.error("error: " + event);
+				};
+
+				const itemObjectStore = deleteTransaction.objectStore("thing");
+				const projectIdIndex = itemObjectStore.index("project_id");
+				const projectBasedCursor = projectIdIndex.openKeyCursor(IDBKeyRange.only(projectId)); //opens all records bearing the selected tag number
+				projectBasedCursor.onsuccess = (event) => {
+					const cursor = event.target.result;
+					if (cursor != null) {
+						itemObjectStore.delete(cursor.primaryKey);
+						cursor.continue();
+					}
+					else {
+						resolve();
+					}
+				}
+			}
+			openDBRequest.onerror = (event) => {
+				alert("Database error: " + event.target.errorCode);
+				reject();
+			}
+		});
+
+	},
 }
 const itemTypesDB = {
 	makeid: (length) => {
@@ -327,15 +379,16 @@ const itemTypesDB = {
 		return new Promise((resolve, reject) => {
 			// Get the currently active project.
 			var indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
-			var openDBRequest = indexedDB.open("thingdb", 9);
+			var openDBRequest = indexedDB.open(dbName, dbVersion);
 			openDBRequest.onsuccess = (event) => {
-				var db = event.target.result;
-				var loadTransaction = db.transaction(["type"], 'readonly');
-				var objectStore = loadTransaction.objectStore("type");
+				//const db = event.target.result;
+				//const loadTransaction = db.transaction(["type"], 'readonly');
+				//const objectStore = loadTransaction.objectStore("type");
+				//const projectIdIndex = objectStore.index("project_id");
+				const loadRequest = event.target.result.transaction(["type"], 'readonly').objectStore("type").index("project_id").getAll(projectId);
 
-				var loadRequest = objectStore.getAll();
 				loadRequest.onsuccess = (event) => {
-					resolve(event.target.result.filter(item => item.project_id == projectId));
+					resolve(event.target.result);
 				};
 				loadRequest.onerror = (event) => {
 					console.log("Error in loading.");
@@ -354,13 +407,13 @@ const itemTypesDB = {
 	save: (itemType) => {
 		return new Promise((resolve, reject) => {
 			const indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
-			const openDBRequest = indexedDB.open("thingdb", 9);
+			const openDBRequest = indexedDB.open(dbName, dbVersion);
 			openDBRequest.onsuccess = (event) => {
 				const db = event.target.result;
 				const saveTransaction = db.transaction(["type"], "readwrite");
 				// Do something when all the data is added to the database.
 				saveTransaction.oncomplete = (event) => {
-					console.log("itemType written!");
+					//console.log("itemType written!");
 				};
 				saveTransaction.onerror = (event) => {
 					console.error("itemType error: " + event);
@@ -398,10 +451,12 @@ const itemTypesDB = {
 					mergeditemType = { ...itemTypeToSave, ...itemType };
 				}
 				saveRequest.onsuccess = (event) => {
-					console.log(newRecord ? "itemType (" + mergeditemType.internal_id + ") added." : "Updated");
+					//console.log(newRecord ? "itemType (" + mergeditemType.internal_id + ") added." : "Updated");
 					resolve(mergeditemType);
 				}
-				saveRequest.onerror = (event) => { console.log("itemType (" + mergeditemType.internal_id + ") not added."); }
+				saveRequest.onerror = (event) => { 
+					//console.log("itemType (" + mergeditemType.internal_id + ") not added."); 
+				}
 				saveRequest.oncomplete = (event) => {
 					db.close();
 				}
@@ -415,12 +470,12 @@ const itemTypesDB = {
 	delete: (itemTypeId) => {
 		return new Promise((resolve, reject) => {
 			const indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
-			const openDBRequest = indexedDB.open("thingdb", 9);
+			const openDBRequest = indexedDB.open(dbName, dbVersion);
 			openDBRequest.onsuccess = (event) => {
 				const db = event.target.result;
 				const deleteTransaction = db.transaction(["type"], "readwrite");
 				deleteTransaction.oncomplete = (event) => {
-					console.log("itemType deleted!");
+					//console.log("itemType deleted!");
 				};
 				deleteTransaction.onerror = (event) => {
 					console.error("error: " + event);
@@ -429,11 +484,11 @@ const itemTypesDB = {
 				const itemObjectStore = deleteTransaction.objectStore("type");
 				const deleteRequest = itemObjectStore.delete(itemTypeId);
 				deleteRequest.onsuccess = (event) => {
-					console.log("deleted");
+					//console.log("deleted");
 					resolve();
 				}
 				deleteRequest.onerror = (event) => {
-					console.log("not deleted.");
+					//console.log("not deleted.");
 				}
 				deleteRequest.oncomplete = (event) => {
 					db.close();
@@ -444,7 +499,43 @@ const itemTypesDB = {
 				reject();
 			}
 		});
-	}
+	},
+	deleteAll: (projectId) => {
+		return new Promise((resolve, reject) => {
+			const indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
+			const openDBRequest = indexedDB.open(dbName, dbVersion);
+			openDBRequest.onsuccess = (event) => {
+				const db = event.target.result;
+				const deleteTransaction = db.transaction(["type"], "readwrite");
+				deleteTransaction.oncomplete = (event) => {
+//					console.log("items deleted!");
+				};
+				deleteTransaction.onerror = (event) => {
+					console.error("error: " + event);
+				};
+
+				const itemObjectStore = deleteTransaction.objectStore("type");
+				const projectIdIndex = itemObjectStore.index("project_id");
+				const projectBasedCursor = projectIdIndex.openKeyCursor(IDBKeyRange.only(projectId)); //opens all records bearing the selected tag number
+				projectBasedCursor.onsuccess = (event) => {
+					const cursor = event.target.result;
+					if (cursor != null) {
+						itemObjectStore.delete(cursor.primaryKey);
+						cursor.continue();
+					}
+					else {
+						resolve();
+					}
+				}
+			}
+			openDBRequest.onerror = (event) => {
+				alert("Database error: " + event.target.errorCode);
+				reject();
+			}
+		});
+
+	},
+
 };
 const linksDB = {
 	makeid: (length) => {
@@ -460,18 +551,14 @@ const linksDB = {
 		return new Promise((resolve, reject) => {
 			// Get the currently active project.
 			var indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
-			var openDBRequest = indexedDB.open("thingdb", 9);
+			var openDBRequest = indexedDB.open(dbName, dbVersion);
 			openDBRequest.onsuccess = (event) => {
-				var db = event.target.result;
-				var loadTransaction = db.transaction(["connection"], 'readonly');
-				var objectStore = loadTransaction.objectStore("connection");
-
-				var loadRequest = objectStore.getAll();
+				const loadRequest = event.target.result.transaction(["connection"], 'readonly').objectStore("connection").index("project_id").getAll(projectId);
 				loadRequest.onsuccess = (event) => {
 					resolve(event.target.result.filter(item => item.project_id == projectId));
 				};
 				loadRequest.onerror = (event) => {
-					console.log("Error in loading.");
+					//console.log("Error in loading.");
 					reject();
 				}
 				loadRequest.oncomplete = (event) => {
@@ -487,13 +574,13 @@ const linksDB = {
 	save: (link) => {
 		return new Promise((resolve, reject) => {
 			const indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
-			const openDBRequest = indexedDB.open("thingdb", 9);
+			const openDBRequest = indexedDB.open(dbName, dbVersion);
 			openDBRequest.onsuccess = (event) => {
 				const db = event.target.result;
 				const saveTransaction = db.transaction(["connection"], "readwrite");
 				// Do something when all the data is added to the database.
 				saveTransaction.oncomplete = (event) => {
-					console.log("link written!");
+					//console.log("link written!");
 				};
 				saveTransaction.onerror = (event) => {
 					console.error("link error: " + event);
@@ -502,25 +589,25 @@ const linksDB = {
 				let saveRequest = null;
 				// Only save what is needed in the db. d3 adds a lot of unneccesary attributes for thedb.
 				let sourceInternalId = null;
-				if(typeof(link.source) == "string") {
+				if (typeof (link.source) == "string") {
 					sourceInternalId = link.source;
 				}
-				else if(link.source != null) {
+				else if (link.source != null) {
 					sourceInternalId = link.source.internal_id;
 				}
 				let targetInternalId = null;
-				if(typeof(link.target) == "string") {
+				if (typeof (link.target) == "string") {
 					targetInternalId = link.target;
 				}
-				else if(link.target != null) {
+				else if (link.target != null) {
 					targetInternalId = link.target.internal_id;
 				}
 
 				let connectorInternalId = null;
-				if(typeof(link.connector) == "string") {
+				if (typeof (link.connector) == "string") {
 					connectorInternalId = link.connector;
 				}
-				else if(link.connector != null) {
+				else if (link.connector != null) {
 					connectorInternalId = link.connector.internal_id;
 				}
 				const linkToSave = {
@@ -553,11 +640,13 @@ const linksDB = {
 					mergedLink = { ...linkToSave, ...link };
 				}
 				saveRequest.onsuccess = (event) => {
-					console.log(newRecord ? "link (" + mergedLink.internal_id + ") added." : "Updated");
-					console.log(mergedLink);
+					//console.log(newRecord ? "link (" + mergedLink.internal_id + ") added." : "Updated");
+					//console.log(mergedLink);
 					resolve(mergedLink);
 				}
-				saveRequest.onerror = (event) => { console.log("link (" + mergedLink.internal_id + ") not added."); }
+				saveRequest.onerror = (event) => { 
+					//console.log("link (" + mergedLink.internal_id + ") not added."); 
+				}
 				saveRequest.oncomplete = (event) => {
 					db.close();
 				}
@@ -571,12 +660,12 @@ const linksDB = {
 	delete: (linkId) => {
 		return new Promise((resolve, reject) => {
 			const indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
-			const openDBRequest = indexedDB.open("thingdb", 9);
+			const openDBRequest = indexedDB.open(dbName, dbVersion);
 			openDBRequest.onsuccess = (event) => {
 				const db = event.target.result;
 				const deleteTransaction = db.transaction(["connection"], "readwrite");
 				deleteTransaction.oncomplete = (event) => {
-					console.log("Link deleted!");
+					//console.log("Link deleted!");
 				};
 				deleteTransaction.onerror = (event) => {
 					console.error("error: " + event);
@@ -585,11 +674,11 @@ const linksDB = {
 				const itemObjectStore = deleteTransaction.objectStore("connection");
 				const deleteRequest = itemObjectStore.delete(linkId);
 				deleteRequest.onsuccess = (event) => {
-					console.log("deleted");
+					//console.log("deleted");
 					resolve();
 				}
 				deleteRequest.onerror = (event) => {
-					console.log("not deleted.");
+					//console.log("not deleted.");
 				}
 				deleteRequest.oncomplete = (event) => {
 					db.close();
@@ -600,7 +689,43 @@ const linksDB = {
 				reject();
 			}
 		});
-	}
+	},
+	deleteAll: (projectId) => {
+		return new Promise((resolve, reject) => {
+			const indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
+			const openDBRequest = indexedDB.open(dbName, dbVersion);
+			openDBRequest.onsuccess = (event) => {
+				const db = event.target.result;
+				const deleteTransaction = db.transaction(["connection"], "readwrite");
+				deleteTransaction.oncomplete = (event) => {
+					//console.log("items deleted!");
+				};
+				deleteTransaction.onerror = (event) => {
+					console.error("error: " + event);
+				};
+
+				const itemObjectStore = deleteTransaction.objectStore("connection");
+				const projectIdIndex = itemObjectStore.index("project_id");
+				const projectBasedCursor = projectIdIndex.openKeyCursor(IDBKeyRange.only(projectId)); //opens all records bearing the selected tag number
+				projectBasedCursor.onsuccess = (event) => {
+					const cursor = event.target.result;
+					if (cursor != null) {
+						itemObjectStore.delete(cursor.primaryKey);
+						cursor.continue();
+					}
+					else {
+						resolve();
+					}
+				}
+			}
+			openDBRequest.onerror = (event) => {
+				alert("Database error: " + event.target.errorCode);
+				reject();
+			}
+		});
+
+	},
+
 };
 const linkTypesDB = {
 	makeid: (length) => {
@@ -616,18 +741,14 @@ const linkTypesDB = {
 		return new Promise((resolve, reject) => {
 			// Get the currently active project.
 			var indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
-			var openDBRequest = indexedDB.open("thingdb", 9);
+			var openDBRequest = indexedDB.open(dbName, dbVersion);
 			openDBRequest.onsuccess = (event) => {
-				var db = event.target.result;
-				var loadTransaction = db.transaction(["connector"], 'readonly');
-				var objectStore = loadTransaction.objectStore("connector");
-
-				var loadRequest = objectStore.getAll();
+				const loadRequest = event.target.result.transaction(["connector"], 'readonly').objectStore("connector").index("project_id").getAll(projectId);
 				loadRequest.onsuccess = (event) => {
 					resolve(event.target.result.filter(item => item.project_id == projectId));
 				};
 				loadRequest.onerror = (event) => {
-					console.log("Error in loading.");
+					//console.log("Error in loading.");
 					reject();
 				}
 				loadRequest.oncomplete = (event) => {
@@ -643,13 +764,13 @@ const linkTypesDB = {
 	save: (linkType) => {
 		return new Promise((resolve, reject) => {
 			const indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
-			const openDBRequest = indexedDB.open("thingdb", 9);
+			const openDBRequest = indexedDB.open(dbName, dbVersion);
 			openDBRequest.onsuccess = (event) => {
 				const db = event.target.result;
 				const saveTransaction = db.transaction(["connector"], "readwrite");
 				// Do something when all the data is added to the database.
 				saveTransaction.oncomplete = (event) => {
-					console.log("linkType written!");
+//					console.log("linkType written!");
 				};
 				saveTransaction.onerror = (event) => {
 					console.error("linkType error: " + event);
@@ -687,10 +808,12 @@ const linkTypesDB = {
 					mergedlinkType = { ...linkTypeToSave, ...linkType };
 				}
 				saveRequest.onsuccess = (event) => {
-					console.log(newRecord ? "linkType (" + mergedlinkType.internal_id + ") added." : "Updated");
+//					console.log(newRecord ? "linkType (" + mergedlinkType.internal_id + ") added." : "Updated");
 					resolve(mergedlinkType);
 				}
-				saveRequest.onerror = (event) => { console.log("linkType (" + mergedlinkType.internal_id + ") not added."); }
+				saveRequest.onerror = (event) => { 
+					//console.log("linkType (" + mergedlinkType.internal_id + ") not added."); 
+				}
 				saveRequest.oncomplete = (event) => {
 					db.close();
 				}
@@ -704,12 +827,12 @@ const linkTypesDB = {
 	delete: (linkTypeId) => {
 		return new Promise((resolve, reject) => {
 			const indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
-			const openDBRequest = indexedDB.open("thingdb", 9);
+			const openDBRequest = indexedDB.open(dbName, dbVersion);
 			openDBRequest.onsuccess = (event) => {
 				const db = event.target.result;
 				const deleteTransaction = db.transaction(["connector"], "readwrite");
 				deleteTransaction.oncomplete = (event) => {
-					console.log("linkType deleted!");
+					//console.log("linkType deleted!");
 				};
 				deleteTransaction.onerror = (event) => {
 					console.error("error: " + event);
@@ -718,11 +841,11 @@ const linkTypesDB = {
 				const itemObjectStore = deleteTransaction.objectStore("connector");
 				const deleteRequest = itemObjectStore.delete(linkTypeId);
 				deleteRequest.onsuccess = (event) => {
-					console.log("deleted");
+					//console.log("deleted");
 					resolve();
 				}
 				deleteRequest.onerror = (event) => {
-					console.log("not deleted.");
+					//console.log("not deleted.");
 				}
 				deleteRequest.oncomplete = (event) => {
 					db.close();
@@ -733,11 +856,46 @@ const linkTypesDB = {
 				reject();
 			}
 		});
-	}
+	},
+	deleteAll: (projectId) => {
+		return new Promise((resolve, reject) => {
+			const indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
+			const openDBRequest = indexedDB.open(dbName, dbVersion);
+			openDBRequest.onsuccess = (event) => {
+				const db = event.target.result;
+				const deleteTransaction = db.transaction(["connector"], "readwrite");
+				deleteTransaction.oncomplete = (event) => {
+//					console.log("items deleted!");
+				};
+				deleteTransaction.onerror = (event) => {
+					console.error("error: " + event);
+				};
+
+				const itemObjectStore = deleteTransaction.objectStore("connector");
+				const projectIdIndex = itemObjectStore.index("project_id");
+				const projectBasedCursor = projectIdIndex.openKeyCursor(IDBKeyRange.only(projectId)); //opens all records bearing the selected tag number
+				projectBasedCursor.onsuccess = (event) => {
+					const cursor = event.target.result;
+					if (cursor != null) {
+						itemObjectStore.delete(cursor.primaryKey);
+						cursor.continue();
+					}
+					else {
+						resolve();
+					}
+				}
+			}
+			openDBRequest.onerror = (event) => {
+				alert("Database error: " + event.target.errorCode);
+				reject();
+			}
+		});
+
+	},
 };
 
 const filtersDB = {
-	makeid : (length) => {
+	makeid: (length) => {
 		var result = '';
 		var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
 		var charactersLength = characters.length;
@@ -750,18 +908,14 @@ const filtersDB = {
 		return new Promise((resolve, reject) => {
 			// Get the currently active project.
 			const indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
-			const openDBRequest = indexedDB.open("thingdb", 9);
+			const openDBRequest = indexedDB.open(dbName, dbVersion);
 			openDBRequest.onsuccess = (event) => {
-				const db = event.target.result;
-				const loadTransaction = db.transaction(["filter"], 'readonly');
-				const objectStore = loadTransaction.objectStore("filter");
-
-				const loadRequest = objectStore.getAll();
+				const loadRequest = event.target.result.transaction(["filter"], 'readonly').objectStore("filter").index("project_id").getAll(projectId);
 				loadRequest.onsuccess = (event) => {
 					resolve(event.target.result.filter(item => item.project_id == projectId));
 				};
 				loadRequest.onerror = (event) => {
-					console.log("Error in loading.");
+					//console.log("Error in loading.");
 					reject();
 				}
 				loadRequest.oncomplete = (event) => {
@@ -778,13 +932,13 @@ const filtersDB = {
 	save: (filter) => {
 		return new Promise((resolve, reject) => {
 			const indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
-			const openDBRequest = indexedDB.open("thingdb", 9);
+			const openDBRequest = indexedDB.open(dbName, dbVersion);
 			openDBRequest.onsuccess = (event) => {
 				const db = event.target.result;
 				const saveTransaction = db.transaction(["filter"], "readwrite");
 				// Do something when all the data is added to the database.
 				saveTransaction.oncomplete = (event) => {
-					console.log("Transaction complete: filter written!");
+					//console.log("Transaction complete: filter written!");
 				};
 				saveTransaction.onerror = (event) => {
 					console.error("filter error: " + event);
@@ -825,11 +979,13 @@ const filtersDB = {
 					mergedRecord.internal_id = filterToSave.internal_id;
 				}
 				saveRequest.onsuccess = (event) => {
-					console.log(newRecord ? "filter (" + objectStore.internal_id + ") added." : "Updated");
+					//console.log(newRecord ? "filter (" + objectStore.internal_id + ") added." : "Updated");
 
 					resolve(mergedRecord);
 				}
-				saveRequest.onerror = (event) => { console.log("filter (" + filter.internal_id + ") not added."); }
+				saveRequest.onerror = (event) => { 
+					//console.log("filter (" + filter.internal_id + ") not added."); 
+				}
 				saveRequest.oncomplete = (event) => {
 					db.close();
 				}
@@ -843,12 +999,12 @@ const filtersDB = {
 	delete: (filterId) => {
 		return new Promise((resolve, reject) => {
 			const indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
-			const openDBRequest = indexedDB.open("thingdb", 9);
+			const openDBRequest = indexedDB.open(dbName, dbVersion);
 			openDBRequest.onsuccess = (event) => {
 				const db = event.target.result;
 				const deleteTransaction = db.transaction(["filter"], "readwrite");
 				deleteTransaction.oncomplete = (event) => {
-					console.log("filter deleted!");
+					//console.log("filter deleted!");
 				};
 				deleteTransaction.onerror = (event) => {
 					console.error("error: " + event);
@@ -857,11 +1013,11 @@ const filtersDB = {
 				const itemObjectStore = deleteTransaction.objectStore("filter");
 				const deleteRequest = itemObjectStore.delete(filterId);
 				deleteRequest.onsuccess = (event) => {
-					console.log("deleted");
+					//console.log("deleted");
 					resolve();
 				}
 				deleteRequest.onerror = (event) => {
-					console.log("not deleted.");
+					//console.log("not deleted.");
 				}
 				deleteRequest.oncomplete = (event) => {
 					db.close();
@@ -897,5 +1053,40 @@ const filtersDB = {
 				}
 			});
 		});
+	},
+	deleteAll: (projectId) => {
+		return new Promise((resolve, reject) => {
+			const indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
+			const openDBRequest = indexedDB.open(dbName, dbVersion);
+			openDBRequest.onsuccess = (event) => {
+				const db = event.target.result;
+				const deleteTransaction = db.transaction(["filter"], "readwrite");
+				deleteTransaction.oncomplete = (event) => {
+					//console.log("items deleted!");
+				};
+				deleteTransaction.onerror = (event) => {
+					console.error("error: " + event);
+				};
+
+				const itemObjectStore = deleteTransaction.objectStore("filter");
+				const projectIdIndex = itemObjectStore.index("project_id");
+				const projectBasedCursor = projectIdIndex.openKeyCursor(IDBKeyRange.only(projectId)); //opens all records bearing the selected tag number
+				projectBasedCursor.onsuccess = (event) => {
+					const cursor = event.target.result;
+					if (cursor != null) {
+						itemObjectStore.delete(cursor.primaryKey);
+						cursor.continue();
+					}
+					else {
+						resolve();
+					}
+				}
+			}
+			openDBRequest.onerror = (event) => {
+				alert("Database error: " + event.target.errorCode);
+				reject();
+			}
+		});
+
 	},
 }

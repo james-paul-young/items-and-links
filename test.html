@@ -1,38 +1,470 @@
-<html>
-	<head>
-		<title>My first three.js app</title>
-		<style>
-			body { margin: 0; }
-			canvas { display: block; }
-		</style>
-	</head>
-	<body>
-		<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r120/three.min.js"></script>
-		<script>
-			var scene = new THREE.Scene();
-			var camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+<!DOCTYPE html>
+<meta charset="UTF-8">
+<style>
+	.node {
+		fill: transparent;
+		stroke: steelblue;
+		stroke-width: 3px;
+		padding-top: 10px;
+	}
 
-			var renderer = new THREE.WebGLRenderer();
-			renderer.setSize( window.innerWidth, window.innerHeight );
-			document.body.appendChild( renderer.domElement );
+	.node text {
+		font: 12px sans-serif;
+	}
 
-			var geometry = new THREE.BoxGeometry();
-			var material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
-			var cube = new THREE.Mesh( geometry, material );
-			scene.add( cube );
+	.link {
+		fill: none;
+		stroke: #ccc;
+		stroke-width: 2px;
+	}
+</style>
 
-			camera.position.z = 5;
+<body>
 
-			var animate = function () {
-				requestAnimationFrame( animate );
+	<!-- load the d3.js library -->
+	<script src="https://d3js.org/d3.v5.min.js"></script>
+	<script>
 
-				cube.rotation.x += 0.01;
-				cube.rotation.y += 0.01;
+		var treeData =
+		{
+			"name": "Top Level",
+			"children": [
+				{
+					"name": "Level 2: A",
+					"children": [
+						{ "name": "Son of A" },
+						{ "name": "Daughter of A" }
+					]
+				},
+				{ "name": "Level 2: B" },
+				{
+					"name": "Level 2: C",
+					"children": [
+						{ "name": "Son of C" },
+						{ "name": "Daughter of C" }
+					]
+				},
+			]
+		};
 
-				renderer.render( scene, camera );
-			};
+		const treeDataFlat = [
+			{
+				id: 0,
+				parentId: null,
+				name: "TL",
+				visible: true,
+				fontSize: 40,
+				fontWeight: "bold",
+			},
+			{
+				id: 1,
+				parentId: 0,
+				name: "TL-->L2A",
+				visible: true,
+				fontSize: 10,
+				fontWeight: "normal",
+			},
+			{
+				id: 2,
+				parentId: 0,
+				name: "TL-->L2B",
+				visible: true,
+				fontSize: 10,
+				fontWeight: "normal",
+			},
+			{
+				id: 3,
+				parentId: 1,
+				name: "TL-->L2A-->L3A",
+				visible: false,
+				fontSize: 10,
+				fontWeight: "normal",
+			},
+			{
+				id: 4,
+				parentId: 1,
+				name: "TL-->L2A-->L3B",
+				visible: false,
+				fontSize: 10,
+				fontWeight: "normal",
+			},
+			{
+				id: 6,
+				parentId: 1,
+				name: "TL-->L2A-->L3C",
+				visible: false,
+				fontSize: 10,
+				fontWeight: "normal",
+			},
+			{
+				id: 7,
+				parentId: 6,
+				name: "TL-->L2A-->L3C-->L4A",
+				visible: false,
+				fontSize: 10,
+				fontWeight: "normal",
+			},
+			{
+				id: 5,
+				parentId: 0,
+				name: "TL-->L2C",
+				visible: true,
+				fontSize: 10,
+				fontWeight: "normal",
+			},
+			{
+				id: 8,
+				parentId: 5,
+				name: "TL-->L2C-->L3A",
+				visible: false,
+				fontSize: 10,
+				fontWeight: "normal",
+			},
+			{
+				id: 9,
+				parentId: 5,
+				name: "TL-->L2C-->L3B",
+				visible: false,
+				fontSize: 10,
+				fontWeight: "normal",
+			},
 
-			animate();
-		</script>
-	</body>
-</html>
+		]
+		// Set the dimensions and margins of the diagram
+		var margin = { top: 20, right: 90, bottom: 30, left: 90 },
+			width = 1024 - margin.left - margin.right,
+			height = 768 - margin.top - margin.bottom,
+			screenDepthMultiplier = 100;
+
+		// const setupRussianDoll = (elements, parentWidth, parentHeight) => {
+		// 	elements.forEach((sibling, index, array) => {
+		// 		const getDepth = (node) => {
+		// 			let depth = 0;
+		// 			const parent = elements.find(potentialParent => potentialParent.id == node.parent);
+		// 			if(parent != null) {
+		// 				depth = 1 + getDepth(parent);
+		// 			}
+		// 			return depth;
+		// 		}
+		// 		sibling.depth = getDepth(sibling) + 1;
+		// 		const siblings = elements.filter(potentialSibling => potentialSibling.parent == sibling.parent);
+		// 		const parent = elements.find(potentialParent => potentialParent.id == sibling.parent);
+		// 		sibling.parentRef = parent;
+		// 		sibling.height = parent ? (parent.height / siblings.length) : 1;
+		// 		sibling.width = parent ? (parent.width - 0.1) : 1;
+		// 		sibling.y = parent ? (parent.y + (siblings.findIndex(i => i.id == sibling.id) * sibling.height)) : 0;
+		// 		//sibling.x = parent ? (parent.x + (siblings.findIndex(i => i.id == sibling.id) * sibling.width)) : 0;
+		// 		sibling.x = 0;
+		// 	});
+		// }
+		const setupRussianDoll = (elements, parent, depth, margin) => {
+			const children = elements.filter(potentialChild => potentialChild.parentId == parent.id);
+			children.forEach((child, index, array) => {
+				if (depth % 2 == 0) {
+					child.x = (parent.x + margin);
+					child.y = parent.y + parent.fontSize + (((parent.height - parent.fontSize) / array.length)) * index + margin;
+					child.width = parent.width - (margin * 2);
+					child.height = (parent.height - parent.fontSize) / array.length - (margin * 2);
+				}
+				else {
+					child.x = parent.x + (parent.width / array.length) * index + margin;
+					child.y = (parent.y + margin + parent.fontSize);
+					child.height = parent.height - parent.fontSize- (margin * 2);
+					child.width = parent.width / array.length - (margin * 2);
+				}
+				child.depth = depth + 1;
+				setupRussianDoll(elements, child, child.depth, margin);
+			})
+			// elements.forEach((sibling, index, array) => {
+			// 	const getDepth = (node) => {
+			// 		let depth = 0;
+			// 		const parent = elements.find(potentialParent => potentialParent.id == node.parent);
+			// 		if (parent != null) {
+			// 			depth = 1 + getDepth(parent);
+			// 		}
+			// 		return depth;
+			// 	}
+			// 	sibling.depth = getDepth(sibling) + 1;
+			// 	const siblings = elements.filter(potentialSibling => potentialSibling.parent == sibling.parent);
+			// 	const parent = elements.find(potentialParent => potentialParent.id == sibling.parent);
+			// 	sibling.parentRef = parent;
+			// 	sibling.height = parentHeight / siblings.length - margin;
+			// 	sibling.width = parentWidth - margin;
+			// 	// sibling.y = parent ? (parent.y + (siblings.findIndex(i => i.id == sibling.id) * sibling.height)) : 0;
+			// 	// //sibling.x = parent ? (parent.x + (siblings.findIndex(i => i.id == sibling.id) * sibling.width)) : 0;
+			// 	// sibling.x = 0;
+			// });
+		}
+
+		//treeDataFlat.sort((a, b) => a.parent < b.parent ? -1 : 1)
+		treeDataFlat[0].height = height;
+		treeDataFlat[0].width = width;
+		treeDataFlat[0].x = 0;
+		treeDataFlat[0].y = 0;
+
+		setupRussianDoll(treeDataFlat, treeDataFlat[0], 0, 10);
+		//return;
+		// // append the svg object to the body of the page
+		// // appends a 'group' element to 'svg'
+		// // moves the 'group' element to the top left margin
+		var svg = d3.select("body").append("svg")
+			.attr("width", width + margin.right + margin.left)
+			.attr("height", height + margin.top + margin.bottom)
+			.append("g")
+			.attr("transform", "translate("
+				+ margin.left + "," + margin.top + ")");
+
+		const scale = 500;
+		const update = () => {
+			console.table(treeDataFlat);
+			const allRects = svg.selectAll("g.container")
+				.data(treeDataFlat.filter(datum => datum.visible), d => d.id)
+
+
+			const gRects = allRects.enter()
+				.append("g")
+				.attr("transform", d => `translate(${d.x}, ${d.y})`)
+				.attr("class", "container")
+
+			gRects.append("rect")
+				.attr("class", "node")
+				.attr("width", d => d.width)
+				.attr("height", d => d.height)
+				.on("click", d => {
+					console.log(d.name + " clicked!")
+					const children = treeDataFlat.filter(child => child.parentId == d.id);
+					children.forEach(child => child.visible = !child.visible);
+					update();
+				});
+			gRects.append("text")
+				.text(d => d.name)
+				.attr("x", function (d) {
+					d.xOffset = this.getBBox().width / 2;
+					return d.width / 2 - d.xOffset;
+				})
+				.attr("y", d => 15)
+
+			allRects.exit().remove();
+		};
+		update();
+
+		// var i = 0,
+		// 	duration = 750,
+		// 	root;
+
+		// // declares a tree layout and assigns the size
+		// var treemap = d3.tree().size([height, width]);
+
+		// // Assigns parent, children, height, depth
+		// root = d3.hierarchy(treeData, function (d) { return d.children; });
+		// root.x0 = height / 2;
+		// root.y0 = 0;
+
+		// // Collapse after the second level
+		// root.children.forEach(collapse);
+
+		// update(root);
+
+		// // Collapse the node and all it's children
+		// function collapse(d) {
+		// 	if (d.children) {
+		// 		d._children = d.children
+		// 		d._children.forEach(collapse)
+		// 		d.children = null
+		// 	}
+		// }
+
+		// function update(source) {
+
+		// 	// Assigns the x and y position for the nodes
+		// 	var treeData = treemap(root);
+
+		// 	// Compute the new tree layout.
+		// 	var nodes = treeData.descendants(),
+		// 		links = treeData.descendants().slice(1);
+
+		// 	// Normalize for fixed-depth.
+		// 	nodes.forEach(function (d) { d.y = d.depth * screenDepthMultiplier });
+
+		// 	// ****************** Nodes section ***************************
+
+		// 	// Update the nodes...
+		// 	var node = svg.selectAll('g.node')
+		// 		.data(nodes, function (d) { return d.id || (d.id = ++i); });
+
+		// 	// Enter any new modes at the parent's previous position.
+		// 	var nodeEnter = node.enter().append('g')
+		// 		.attr('class', 'node')
+		// 		.attr("transform", function (d) {
+		// 			return "translate(" + source.y0 + "," + source.x0 + ")";
+		// 		})
+		// 		.on('click', click);
+
+		// 	nodeEnter.append('rect')
+		// 		.attr('class', 'node')
+		// 		.attr('width', 1e-6)
+		// 		.attr('height', 1e-6)
+		// 	// .style("fill", function (d) {
+		// 	// 	return d._children ? "lightsteelblue" : "#fff";
+		// 	// });
+
+
+		// 	// Add Circle for the nodes
+		// 	//   nodeEnter.append('circle')
+		// 	//       .attr('class', 'node')
+		// 	//       .attr('r', 1e-6)
+		// 	//       .style("fill", function(d) {
+		// 	//           return d._children ? "lightsteelblue" : "#fff";
+		// 	//       });
+
+		// 	// Add labels for the nodes
+		// 	nodeEnter.append('text')
+		// 		.attr("dy", ".35em")
+		// 		.attr("x", function (d) {
+		// 			//return d.children || d._children ? -13 : 13;
+		// 			return 13;
+		// 		})
+		// 		.attr("text-anchor", function (d) {
+		// 			return "start";
+		// 			//					return d.children || d._children ? "end" : "start";
+		// 		})
+		// 		.text(function (d) { return d.data.name; });
+
+		// 	// UPDATE
+		// 	var nodeUpdate = nodeEnter.merge(node);
+
+		// 	// Transition to the proper position for the node
+		// 	nodeUpdate.transition()
+		// 		.duration(duration)
+		// 		.attr("transform", function (d) {
+		// 			const siblings = d.parent ? d.parent.children.length * (d.depth + 1) : 1;
+		// 			const dy = d.y - 30 * siblings;
+		// 			return "translate(" + (d.y - 0) + "," + (d.x - 5) + ")";
+		// 		});
+
+		// 	// Update the node attributes and style
+		// 	nodeUpdate.select('rect.node')
+		// 		.attr('height', d => {
+		// 			let rectHeight = height;
+		// 			if(d.parent != null) {
+		// 				const siblings = d.parent.children.length;
+		// 				rectHeight = d.parent.rectHeight / (siblings);
+		// 			} 
+		// 			d.rectHeight = rectHeight;
+		// 			// else {
+		// 			// 	d.rectHeight = parentRectHeight / siblings;
+		// 			// }
+		// 			return d.rectHeight;
+		// 			//return 10;
+		// 		})
+		// 		.attr('y', d => {
+		// 			const siblings = d.parent ? d.parent.children.length : 1;
+		// 			const parentRectHeight = d.parent ? d.parent.rectHeight : height;
+		// 			//d.rectHeight = (parentRectHeight / siblings) - 10;
+		// 			//return (height / siblings - 30) / 2 * -1;
+		// 			return -d.rectHeight / 2;
+		// 			//return 0;
+
+		// 		})
+		// 		.attr('width', d => {
+		// 			const siblings = d.parent ? d.parent.children.length : 1;
+		// 			const parentRectWidth = d.parent ? d.parent.rectWidth : width;
+		// 			d.rectWidth = parentRectWidth - 30;
+		// 			//return (height / siblings - 30) / 2 * -1;
+		// 			//return d.rectWidth;
+		// 			return 100;
+		// 		})
+		// 		// .style("fill", function (d) {
+		// 		// 	return d._children ? "lightsteelblue" : "#fff";
+		// 		// })
+		// 		.attr('cursor', 'pointer');
+		// 	//   nodeUpdate.select('circle.node')
+		// 	//     .attr('r', 10)
+		// 	//     .style("fill", function(d) {
+		// 	//         return d._children ? "lightsteelblue" : "#fff";
+		// 	//     })
+		// 	//     .attr('cursor', 'pointer');
+
+
+		// 	// Remove any exiting nodes
+		// 	var nodeExit = node.exit().transition()
+		// 		.duration(duration)
+		// 		.attr("transform", function (d) {
+		// 			return "translate(" + source.y + "," + source.x + ")";
+		// 		})
+		// 		.remove();
+
+		// 	// On exit reduce the node circles size to 0
+		// 	//   nodeExit.select('circle')
+		// 	//     .attr('r', 1e-6);
+		// 	nodeExit.select('rect')
+		// 		.attr('width', 1e-6)
+		// 		.attr('height', 1e-6);
+
+		// 	// On exit reduce the opacity of text labels
+		// 	nodeExit.select('text')
+		// 		.style('fill-opacity', 1e-6);
+
+		// 	// ****************** links section ***************************
+
+		// 	// Update the links...
+		// 	var link = svg.selectAll('path.link')
+		// 		.data(links, function (d) { return d.id; });
+
+		// 	// Enter any new links at the parent's previous position.
+		// 	var linkEnter = link.enter().insert('path', "g")
+		// 		.attr("class", "link")
+		// 		.attr('d', function (d) {
+		// 			var o = { x: source.x0, y: source.y0 }
+		// 			return diagonal(o, o)
+		// 		});
+
+		// 	// UPDATE
+		// 	var linkUpdate = linkEnter.merge(link);
+
+		// 	// Transition back to the parent element position
+		// 	linkUpdate.transition()
+		// 		.duration(duration)
+		// 		.attr('d', function (d) { return diagonal(d, d.parent) });
+
+		// 	// Remove any exiting links
+		// 	var linkExit = link.exit().transition()
+		// 		.duration(duration)
+		// 		.attr('d', function (d) {
+		// 			var o = { x: source.x, y: source.y }
+		// 			return diagonal(o, o)
+		// 		})
+		// 		.remove();
+
+		// 	// Store the old positions for transition.
+		// 	nodes.forEach(function (d) {
+		// 		d.x0 = d.x;
+		// 		d.y0 = d.y;
+		// 	});
+
+		// 	// Creates a curved (diagonal) path from parent to the child nodes
+		// 	function diagonal(s, d) {
+
+		// 		path = `M ${s.y} ${s.x}
+        //     C ${(s.y + d.y) / 2} ${s.x},
+        //       ${(s.y + d.y) / 2} ${d.x},
+        //       ${d.y} ${d.x}`
+
+		// 		return path
+		// 	}
+
+		// 	// Toggle children on click.
+		// 	function click(d) {
+		// 		if (d.children) {
+		// 			d._children = d.children;
+		// 			d.children = null;
+		// 		} else {
+		// 			d.children = d._children;
+		// 			d._children = null;
+		// 		}
+		// 		update(d);
+		// 	}
+		// }
+
+	</script>
+</body>
