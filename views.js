@@ -1,3 +1,4 @@
+"use strict";
 const updateProgress = (value, description) => {
 	const progressBarContainer = document.getElementById("progressBarContainer");
 	progressBarContainer.classList.remove("progress-hidden");
@@ -253,7 +254,7 @@ const projects = (async () => {
 			inputFileDialog.type = "file";
 			inputFileDialog.accept = ".json"
 			inputFileDialog.addEventListener("change", event => {
-//				console.log(event);
+				//				console.log(event);
 				var importFile = event.target.files[0];
 				if (importFile != null) {
 					const fileReader = new FileReader();
@@ -613,7 +614,7 @@ const items = (async () => {
 	}
 
 	const curatedList = async () => {
-		let sortFunction = null;
+		let sortFunction = null, predefinedFilterFunction = null;
 		if (sortOrder == null) {
 			sortFunction = (a, b) => ('' + a.identifier).localeCompare(b.identifier);
 		}
@@ -689,7 +690,7 @@ const items = (async () => {
 })();
 
 const itemTypes = (async () => {
-	let items = null, links = null, linkTypes = null, itemTypes = null, activeProject = null;
+	let items = null, links = null, linkTypes = null, itemTypes = null, activeProject = null, predefinedFilterFunction = null;
 	let sortOrder = null;
 	let filter = null;
 	let selectedRow = null;
@@ -1200,6 +1201,7 @@ const links = (async () => {
 		let linkColour = "";
 		let linkSourceType = "";
 		let linkTargetType = "";
+		let linkTypeDescription = "";
 		if (link.connector != null) {
 			const end = dashesAndEnds.end.find(e => e.name == link.connector.marker);
 			endPath = end.path;
@@ -1256,7 +1258,7 @@ const links = (async () => {
 	}
 
 	const curatedList = async () => {
-		let sortFunction = null;
+		let sortFunction = null, predefinedFilterFunction;
 		if (sortOrder == null) {
 			sortFunction = (a, b) => ('' + a.identifier).localeCompare(b.identifier);
 		}
@@ -1542,7 +1544,7 @@ const linkTypes = (async () => {
 	};
 
 	const curatedList = async () => {
-		let sortFunction = null;
+		let sortFunction = null, predefinedFilterFunction;
 		if (sortOrder == null) {
 			sortFunction = (a, b) => ('' + a.identifier).localeCompare(b.identifier);
 		}
@@ -1608,8 +1610,8 @@ const linkTypes = (async () => {
 	setupEventHandlers();
 })();
 
-const visualise = (async () => {
-	let links = null, unmappedLinks = null, linkTypes = null, items = null, itemTypes = null, displayOptions = null, simulation = null, traceFromItem = null;
+const visualiseForceDirected = (async () => {
+	let links = null, unmappedLinks = null, linkTypes = null, items = null, itemTypes = null, displayOptions = null, simulation = null, traceFromItem = null, activeProject;
 	let heatmapItems = null;
 	let drawnHeatmapItems = null;
 	let currentItemWithContextMenu = null;
@@ -2062,8 +2064,9 @@ const visualise = (async () => {
 		return itemContextMenu;
 	}
 	const setupSimulation = (width, height) => {
-		d3.select("#viewBox").remove();
+		d3.select("#force-directed-svg").remove();
 		const parentSVG = d3.select("#chart").append("svg")
+			.attr("id", "force-directed-svg")
 			.attr("version", "1.1")
 			.attr("baseProfile", "full")
 			.attr("xmlns", "http://www.w3.org/2000/svg")
@@ -2649,192 +2652,6 @@ const visualise = (async () => {
 				});
 		}
 		let image = null;
-		// if (displayOptions.showItems) {
-		// 	image = svg
-		// 		.selectAll(".item-image")
-		// 		.data(filteredItems)
-		// 		.join("image")
-		// 		// .join("g")
-		// 		.attr("class", "item-image")
-		// 		.attr("href", d => {
-		// 			return d.custom_image ? ("data:image/png;base64, " + btoa(d.custom_image)) : null;
-		// 		})
-		// 		.attr("width", displayOptions.itemRadius * 1.3)
-		// 		.attr("height", displayOptions.itemRadius * 1.3)
-		// 		//.attr("id", d => "circle_" + d.internal_id)
-		// 		// .append("circle")
-		// 		// .attr("class", "itemCircle")
-		// 		.style("opacity", d => {
-		// 			let opacity = "0.05";
-		// 			if (displayOptions.partialNameCriteria.length > 0) {
-		// 				if ((d.identifier != null) && (d.identifier.toLowerCase().indexOf(displayOptions.partialNameCriteria.toLowerCase()) >= 0)) {
-		// 					opacity = "1";
-		// 				}
-		// 			}
-		// 			else if ((traceableItems != null) && (!traceableItems.some(i => i.internal_id == d.internal_id))) {
-		// 				opacity = "0.05"
-		// 			}
-		// 			else {
-		// 				opacity = "1";
-		// 			}
-		// 			return opacity;
-		// 		})
-		// 		.style("visibility", d => {
-		// 			let visibility = "hidden";
-		// 			if ((displayOptions.filter != null) && (displayOptions.filter.visible != null)) {
-		// 				if (displayOptions.filter.visible.types.filter(item => (d.type != null) && (item == d.type.internal_id)).length > 0) {
-		// 					visibility = "visible";
-		// 				}
-		// 			}
-		// 			else {
-		// 				// Default "All" filter selected.
-		// 				visibility = "visible";
-		// 			}
-		// 			return visibility;
-		// 		})
-		// 		.call(drag(simulation))
-		// 		.on("mouseenter", function (d) {
-		// 			d3.select(this).transition(750).attr("r", (displayOptions.itemRadius * 2));
-		// 			// Call "update" here.
-		// 			// d3.selectAll(".item-chart")
-		// 			// 	.data(items.filter(item => immediateItems.some(i => i.internal_id != item.internal_id)))
-		// 			// 	.attr("opacity", "0")
-		// 		})
-		// 		.on("mouseout", function (d) {
-		// 			d3.select(this).transition(750).attr("r", displayOptions.itemRadius);
-		// 			d3.select(this).style("cursor", "default");
-		// 			const tooltip = d3.select("#tooltip");
-		// 			tooltip.style("visibility", "hidden")
-		// 			// const itemsNotOneStepAway = sortedLinks
-		// 			// 	.filter(link => link.source != d.internal_id)
-		// 			// 	.map(link => link.target);
-		// 			// d3.selectAll(".item-chart")
-		// 			// 	.data(itemsNotOneStepAway)
-		// 			// 	.attr("opacity", "1")
-		// 		})
-		// 		.on("mouseover", function (d) {
-		// 			d3.select(this).style("cursor", "pointer");
-		// 			// Tooltip
-		// 			const tooltip = d3.select("#tooltip");
-		// 			tooltip.html(() => `<h4>${d.identifier} (${d.type ? d.type.identifier : ""})</h4>
-		// 				<label>${d.description}</label>
-		// 				<h5>Link Analysis</h5>`)
-		// 				// .style("left", (d3.event.pageX + 300) + "px")
-		// 				// .style("top", (d3.event.pageY - 300) + "px")
-		// 				.style("top", "55px")
-		// 				.style("right", 0)
-		// 				.style("visibility", "visible")
-		// 			// Get all links for this item.
-		// 			const thisItemlinks = links
-		// 				.filter(sortedLink => {
-		// 					const targetFound = sortedLink.target ? sortedLink.target.internal_id == d.internal_id : false;
-		// 					const sourceFound = sortedLink.source ? sortedLink.source.internal_id == d.internal_id : false;
-		// 					return targetFound || sourceFound;
-		// 				});
-		// 			// const itemLinks = sortedLinks.filter(link => link.source.internal_id == d.internal_id || link.target.internal_id == d.internal_id);
-
-
-		// 			const nonUniqueconnectors = thisItemlinks.map(link => link.connector);
-		// 			const linkTypesInUse = [...new Set(nonUniqueconnectors)];
-
-		// 			function countDuplicates(obj, num) {
-		// 				obj[num] = (++obj[num] || 1);
-		// 				return obj;
-		// 			}
-		// 			const uniqueConnectors = nonUniqueconnectors.map(connector => connector ? connector.internal_id : 0).reduce(countDuplicates, {});
-
-		// 			const svg = tooltip.append("svg")
-		// 				.attr("width", 500)
-		// 				.attr("height", (linkTypesInUse.length * 30) + 20)
-		// 			svg
-		// 				.append("g")
-
-
-		// 			// set the ranges
-		// 			const x = d3.scaleLinear()
-		// 				.range([0, 300])
-		// 				.domain([0, d3.max(linkTypesInUse, connector => {
-		// 					return uniqueConnectors[connector ? connector.internal_id : 0];
-		// 				})])
-
-		// 			//console.log("Height = " + svg.attr("height"))
-		// 			const y = d3.scaleBand()
-		// 				.range([0, (linkTypesInUse.length * 30)])
-		// 				.padding(0.1)
-		// 				.domain(linkTypesInUse.map(linkType => linkType ? linkType.internal_id : 0));
-
-		// 			// append the rectangles for the bar chart
-		// 			svg.selectAll(".bar")
-		// 				.data(linkTypesInUse)
-		// 				.enter().append("rect")
-		// 				.attr("class", "bar")
-		// 				.attr("stroke", d => d ? d.colour : "")
-		// 				.attr("fill", d => d ? d.colour : "")
-		// 				.attr("y", d => y(d ? d.internal_id : 0))
-		// 				.attr("height", y.bandwidth())
-		// 				.attr("transform", "translate(110, 0)")
-		// 				.attr("x", d => x(0) + 1)
-		// 				.transition()
-		// 				.duration(800)
-		// 				.attr("width", d => x(uniqueConnectors[d ? d.internal_id : 0]))
-
-		// 			const yAxis = d3.axisLeft(y)
-		// 				.tickFormat((d, i) => {
-		// 					const linkType = linkTypesInUse.find(linkTypeInUse => linkTypeInUse ? linkTypeInUse.internal_id == d : false);
-
-		// 					return linkType ? linkType.identifier : "Unspecified";
-		// 				});
-
-		// 			svg.append("g")
-		// 				.attr("transform", "translate(110, 0)")
-		// 				.call(yAxis);
-		// 			svg.append("g")
-		// 				.attr("transform", `translate(110, ${(linkTypesInUse.length * 30)})`)
-		// 				.call(d3.axisBottom(x).tickFormat(num => Math.floor(num) == num ? num : null))
-		// 				.selectAll("text")
-		// 				//   .attr("transform", "translate(-10,0)rotate(-45)")
-		// 				.style("text-anchor", "end");
-
-		// 			// Animation
-		// 		})
-		// 		.on("click", d => {
-		// 			console.log("Image click");
-		// 			const pendingLink = document.querySelector(".link");
-		// 			if (pendingLink == null) {
-		// 				currentItemWithContextMenu = d;
-		// 				itemContextMenu
-		// 					.attr("transform", `translate(${d.x}, ${d.y})`)
-		// 					.style("visibility", "visible")
-		// 				simulation.stop();
-		// 			}
-		// 			else {
-		// 				d3.select(".link").remove();
-		// 				itemContextMenu.style("visibility", "hidden")
-		// 				addLink(currentItemWithContextMenu, d).then(newLink => {
-		// 					const linkModal = document.getElementById("linkModal");
-		// 					if (linkModal) {
-		// 						document.body.removeChild(linkModal);
-		// 					}
-		// 					document.body.appendChild(linkProperties.setup());
-		// 					linkProperties.view(newLink, links, linkTypes, items, itemTypes, saveNewLink, deleteLink);
-		// 					$('#link-modal').modal();
-		// 					// simulation
-		// 					// 	.items(items)
-		// 					// 	.force("link", d3.forceLink(links).id(d => d.id))
-		// 					update();
-		// 					simulation.alpha(0.001).restart();
-		// 				});
-		// 			}
-		// 			d3.event.stopPropagation();
-		// 		})
-		// 		.each(d => {
-		// 			if (d.type) {
-		// 				if (document.getElementById(`radialGradient_${d.type.internal_id}`) == null) {
-		// 					setupRadialGradientFilter(`radialGradient_${d.type.internal_id}`, d.type ? d.type.colour : "");
-		// 				}
-		// 			}
-		// 		});
-		// }
 		const infoDisplay = document.getElementById("info");
 		infoDisplay.innerHTML = `Items: ${items.length}, Links: ${links.length}.`;
 
@@ -3423,3 +3240,500 @@ const filters = (async () => {
 	setupEventHandlers();
 })();
 
+const visualiseEmbeddedBoxes = (async () => {
+	let items = null, links = null, linkTypes = null, itemTypes = null, activeProject = null;
+	let sortOrder = null, displayOptions = null;
+	let filter = null;
+	displayOptions = {
+		showLinks: true,
+		showLinkLabels: false,
+		showItems: true,
+		showItemLabels: true,
+		itemRadius: 30,
+		partialNameCriteria: "",
+	}
+
+	const setupEventHandlers = () => {
+		const tabLink = document.getElementById("visualise-embedded-tab");
+		console.assert(tabLink != null, "Cannot find visualise-embedded-tab");
+		tabLink.addEventListener("click", event => {
+			updateProgress(33, "Loading Items...");
+			load().then(result => {
+				updateProgress(66, "Listing Items...");
+				list().then(() => {
+					updateProgress(100, "Items loaded.");
+				});
+
+			});
+		});
+		const predefinedfilters = document.getElementById("predefinedfilters");
+		predefinedfilters.addEventListener("change", async event => {
+			list();
+		});
+
+	}
+	const load = () => {
+		return new Promise((resolve, reject) => {
+			projectsDB.getActive().then(project => {
+				activeProject = project;
+				Promise.allSettled([
+					itemsDB.load(project.internal_id),
+					itemTypesDB.load(project.internal_id),
+					linksDB.load(project.internal_id),
+					linkTypesDB.load(project.internal_id),
+				]).then(results => {
+					itemTypes = results[1].value;
+					const loadedItems = results[0].value;
+					items = loadedItems
+						.sort((a, b) => ('' + a.identifier).localeCompare(b.identifier))
+						.map(item => {
+							const type_id = item.type;
+							item.type = itemTypes.find(type => type.internal_id == type_id);
+							return item;
+						});
+
+					linkTypes = results[3].value;
+					const loadedLinks = results[2].value;
+					links = loadedLinks.map(link => {
+						const source_id = link.source;
+						link.source = items.find(item => item.internal_id == source_id);
+						const target_id = link.target;
+						link.target = items.find(item => item.internal_id == target_id);
+						link.connector = linkTypes.find(connector => connector.internal_id == link.connector);
+						return link;
+					});
+					resolve();
+				});
+			});
+		});
+	}
+	const sortAndOrderLinks = (unsortedLinks) => {
+		let nonOrphanedLinks = null;
+		if (unsortedLinks != null) {
+			nonOrphanedLinks = unsortedLinks.filter(link => (link.source != null) && (link.target != null)).map(link => { link.set = null; return link; });
+			// Count the number of links in the set of links between each item.
+			nonOrphanedLinks.forEach(firstlink => {
+				nonOrphanedLinks.forEach(secondlink => {
+					if (firstlink.set == null) { firstlink.set = 1; }
+					if (secondlink.set == null) { secondlink.set = 1; }
+					if (firstlink != secondlink) {
+						// A new connection just has the source and target as the thing IDs. Existing ones have a D3 structure. 
+						// Need to still be able to compare ids though
+						// let firstlinkSource = (typeof (firstlink.source) == "string") ? firstlink.source : firstlink.source.internal_id;
+						// let firstlinkTarget = (typeof (firstlink.target) == "string") ? firstlink.target : firstlink.target.internal_id;
+						// let secondlinkSource = (typeof (secondlink.source) == "string") ? secondlink.source : secondlink.source.internal_id;
+						// let secondlinkTarget = (typeof (secondlink.target) == "string") ? secondlink.target : secondlink.target.internal_id;
+						let firstlinkSource = firstlink.source.internal_id;
+						let firstlinkTarget = firstlink.target.internal_id;
+						let secondlinkSource = secondlink.source.internal_id;
+						let secondlinkTarget = secondlink.target.internal_id;
+
+						if (((firstlinkSource == secondlinkSource) && (firstlinkTarget == secondlinkTarget)) || (
+							(firstlinkSource == secondlinkTarget) && (firstlinkTarget == secondlinkSource))) {
+							console.log("Incrementing set")
+							firstlink.set++;
+							secondlink.set++;
+						}
+					}
+				});
+			});
+			nonOrphanedLinks.sort(function (a, b) {
+				if (a.source > b.source) { return 1; }
+				else if (a.source < b.source) { return -1; }
+				else {
+					if (a.target > b.target) { return 1; }
+					if (a.target < b.target) { return -1; }
+					else { return 0; }
+				}
+			});
+			//any links with duplicate source and target get an incremented 'linknum'
+			for (var i = 0; i < nonOrphanedLinks.length; i++) {
+				let link = nonOrphanedLinks[i];
+				let previousLink = nonOrphanedLinks[i - 1]
+				link.arcDirection = 1;
+				if (i != 0 && link.source == previousLink.source && link.target == previousLink.target) {
+					link.linknum = previousLink.linknum + 1;
+					link.arcDirection = (i % 2) == 0 ? 1 : 0;
+				}
+				else { link.linknum = 1; };
+			};
+
+		}
+
+		return nonOrphanedLinks;
+	};
+	const filterLinks = (filteredItems, unfilteredLinks) => {
+		let linksWithoutNodes = null;
+		if (unfilteredLinks != null) {
+			linksWithoutNodes = unfilteredLinks.filter(link => {
+				let sourceFound = false;
+				let targetFound = false;
+				if (link.target != null) {
+					targetFound = (link.target != null) && filteredItems.some(item => item.internal_id == link.target.internal_id);
+				}
+				if (link.source != null) {
+					sourceFound = (link.target != null) && filteredItems.some(item => item.internal_id == link.source.internal_id);
+				}
+				return targetFound && sourceFound;
+			})
+
+		}
+		let linksNotIncluded = null;
+		if (linksWithoutNodes != null) {
+			linksNotIncluded = linksWithoutNodes.filter(link => {
+				let included = false;
+				if (link.connector != null) {
+					included = displayOptions.filter != null ? displayOptions.filter.included.connectors.find(includedLink => includedLink == link.connector.internal_id) : true;
+				}
+				else {
+					included = true;
+				}
+				return included;
+			})
+
+		}
+		return linksNotIncluded;
+	}
+	const filterItems = (items) => {
+		let filteredItems = null;
+		if (items != null) {
+			filteredItems = items.filter(item => {
+				let include = false;
+				if (item.type != null) {
+					include = displayOptions.filter != null ? displayOptions.filter.included.types.find(includedType => includedType == item.type.internal_id) : true;
+				}
+				else {
+					include = true;
+				}
+				return include;
+			});
+		}
+		return filteredItems;
+	}
+	const curatedItemsList = async () => {
+		let sortFunction = null, predefinedFilterFunction = null;
+		if (sortOrder == null) {
+			sortFunction = (a, b) => ('' + a.identifier).localeCompare(b.identifier);
+		}
+		else {
+			sortFunction = sortOrder;
+		}
+		let filterFunction = null;
+		if (filter == null) {
+			filterFunction = item => true;
+		}
+		else {
+			filterFunction = filter;
+		}
+		const predefinedfilterInput = document.getElementById("predefinedfilters");
+		const activeProject = await projectsDB.getActive();
+		const filters = await filtersDB.load(activeProject.internal_id);
+		const predefinedFilter = filters.find(f => f.internal_id == predefinedfilterInput.value);
+		if (predefinedFilter == null) {
+			predefinedFilterFunction = item => true;
+		}
+		else {
+			predefinedFilterFunction = item => {
+				const included = predefinedFilter.included.types.find(includedItem => {
+					const itemTypeInternalId = item.type ? item.type.internal_id : null;
+					return includedItem == itemTypeInternalId;
+				});
+				const visible = predefinedFilter.visible.types.find(includedItem => {
+					const itemTypeInternalId = item.type ? item.type.internal_id : null;
+					return includedItem == itemTypeInternalId;
+				});
+				return included && visible;
+			}
+		}
+
+		let itemsList = null;
+		if (items != null) {
+			itemsList = items
+				.filter(predefinedFilterFunction)
+				.filter(filterFunction)
+				.sort(sortFunction);
+		}
+		return itemsList;
+	}
+
+	const list = async () => {
+		curatedItemsList().then(curatedItems => {
+			const filteredItems = filterItems(curatedItems);
+			const sortedLinks = sortAndOrderLinks(filterLinks(filteredItems, links));
+			const fontSize = parseInt(window.getComputedStyle(document.body).getPropertyValue('font-size').replace("px", ""));
+			const linkItems = (items, links) => {
+				let flatArray = null
+				if (items != null) {
+					flatArray = items.map(item => {
+						return Object.assign({
+							id: item.internal_id,
+							parentId: null,
+							name: item.identifier,
+							visible: true,
+							fontSize: fontSize + 10,
+							fontWeight: "bold",
+							x: null,
+							y: null,
+							depth: null,
+						}, item);
+					});
+					if (links != null) {
+						links.forEach(link => {
+							let existingTargetItem = flatArray.find(item => item.id == link.source.internal_id);
+							if (existingTargetItem != null) {
+								existingTargetItem.parentId = link.target.internal_id;
+							}
+						});
+
+					}
+				}
+				return flatArray;
+			}
+			const setupRussianDoll = (elements, parent, depth, margin) => {
+				const children = elements.filter(potentialChild => potentialChild.parentId == parent.id);
+				children.forEach((child, index, array) => {
+					if (depth % 2 == 0) {
+						child.x = isNaN(parent.x + margin) ? 0 : parent.x + margin;
+						child.y = parent.y + parent.fontSize + (((parent.height - parent.fontSize) / array.length)) * index + margin;
+						child.width = parent.width - (margin * 2);
+						child.height = (parent.height - parent.fontSize) / array.length - (margin * 2);
+					}
+					else {
+						child.x = isNaN(parent.x + (parent.width / array.length) * index + margin) ? 0 : parent.x + (parent.width / array.length) * index + margin;
+						child.y = (parent.y + margin + parent.fontSize);
+						child.height = parent.height - parent.fontSize - (margin * 2);
+						child.width = parent.width / array.length - (margin * 2);
+					}
+					child.depth = depth + 1;
+					if (child.height < 0) {
+						if (child.identifier == "Education and Training Management") {
+							console.log(child);
+						}
+						child.height = 0;
+					}
+					if (child.width < 0) {
+						child.width = 0;
+					}
+
+					setupRussianDoll(elements, child, child.depth, margin);
+				})
+			}
+			const setupDepths = (elements, parent, depth) => {
+				const children = elements.filter(potentialChild => potentialChild.parentId == parent.id);
+				children.forEach((child, index, array) => {
+					child.depth = depth + 1;
+					if (depth % 2 == 0) {
+						child.y = index;
+						child.x = 0;
+					}
+					else {
+						child.x = index;
+						child.y = 0;
+					}
+					const grandchildCount = setupDepths(elements, child, child.depth);
+					if (grandchildCount == 0) {
+						child.width = 1;
+						child.height = 1;
+					}
+				});
+				if (children.length > 0) {
+					const widths = children.map(child => child.width);
+					parent.width = widths.reduce((accumulator, width) => accumulator + width);
+					const heights = children.map(child => child.height);
+					parent.height = heights.reduce((accumulator, width) => accumulator + width);
+				}
+				return children.length;
+			}
+			const repositionElements = (elements, parent, depth, margin) => {
+				const children = elements.filter(potentialChild => potentialChild.parentId == parent.id);
+				children.forEach((child, index, array) => {
+					if (parent != null) {
+						if (child.depth % 2 == 0) {
+							child.width = Math.floor((parent.width - margin * (array.length + 1))/ array.length);
+							child.height = parent.height - 2 * margin;
+							child.y = parent.y + margin;
+							child.x = margin + parent.x + (index * (child.width + margin));
+						}
+						else {
+							child.height = Math.floor((parent.height - margin * (array.length + 1))/ array.length);
+							child.width = parent.width - 2 * margin;
+							child.x = parent.x + margin;
+							child.y = margin + parent.y + (index * (child.height + margin));
+						}
+					}
+					repositionElements(elements, child, depth, margin);
+				})
+
+			}
+			const setupRussianDollMod = (elements, parent, depth, margin) => {
+				const children = elements.filter(potentialChild => potentialChild.parentId == parent.id);
+				//parent.width = (children.length == 0)? 1 : children.length + ;
+				children.forEach((child, index, array) => {
+					if (depth % 2 == 0) {
+						child.x = index;
+						// child.y = parent.y + parent.fontSize + (((parent.height - parent.fontSize) / array.length)) * index + margin;
+						// child.width = parent.width - (margin * 2);
+						// child.height = (parent.height - parent.fontSize) / array.length - (margin * 2);
+					}
+					else {
+						// child.x = isNaN(parent.x + (parent.width / array.length) * index + margin) ? 0 : parent.x + (parent.width / array.length) * index + margin;
+						child.y = index;
+						// child.height = parent.height - parent.fontSize - (margin * 2);
+						// child.width = parent.width / array.length - (margin * 2);
+					}
+					setupRussianDollMod(elements, child, child.depth, margin);
+				})
+			}
+			const update = (parentG, items) => {
+				//console.table(sortedArray.map(item => { depthTwo: item.depth }));
+				const allRects = parentG.selectAll("g.embedded-items-container")
+					.data(items.filter(datum => datum.visible), d => d.id)
+
+
+				const gRects = allRects.enter()
+					.append("g")
+					.attr("transform", d => `translate(${d.x}, ${d.y})`)
+					.attr("class", "embedded-items-container")
+
+				gRects.append("rect")
+					.attr("class", "node")
+					.attr("width", d => d.width)
+					.attr("height", d => d.height)
+					.attr("rx", 10)
+					.style("fill", d => {
+						//console.log(d)
+						return "transparent";
+						//return ((d.type != null) ? d.type.fill_colour : "green")
+					})
+					.style("stroke", d => (d.type ? d.type.colour : "transparent"))
+					.on("click", d => {
+						console.log(d.name + " clicked!")
+						const children = items.filter(child => child.parentId == d.id);
+						const collapseChildren = (children) => {
+							children.forEach(child => {
+								child.visible = !child.visible;
+								const children = items.filter(childTwo => childTwo.parentId == child.id);
+								collapseChildren(children);
+
+							});
+						}
+						collapseChildren(children);
+						update(parentG, items);
+					});
+				gRects.append("text")
+					.text(d => d.name)
+					.style("font-size", function (d) {
+						let fontsize = parseInt(window.getComputedStyle(this).getPropertyValue('font-size').replace("px", ""));
+						if (this.getBBox().width > d.width) {
+							fontsize = ((d.width) / this.getBBox().width) * 10 + "px";
+						}
+						return fontsize;
+					})
+					.attr("x", function (d) {
+						d.xOffset = this.getBBox().width / 2;
+						let x = (d.width) / 2 - d.xOffset;
+						if (isNaN(x)) {
+							x = 0;
+						}
+						return x;
+					})
+					.attr("y", function (d) {
+						let textHeight = null;
+						if (this.getBBox().height < (d.height)) {
+							textHeight = this.getBBox().height;
+						}
+						else {
+							textHeight = null;
+						}
+						return textHeight;
+					})
+					.style("visibility", function (d) {
+						const fontsize = parseInt(window.getComputedStyle(this).getPropertyValue('font-size').replace("px", ""));
+						let visibility = null;
+						//console.log("BBox height" + this.getBBox().height, ". font size " + fontsize + ". d.height = " + d.height)
+						if (d.height > fontsize) {
+							visibility = "visible";
+						}
+						else {
+							visibility = "hidden";
+						}
+						return visibility;
+					})
+					.style("fill", d => {
+						return "black";
+						const item_colour = d.type ? d.type.fill_colour : d.fill_colour;
+						let colour = null;
+						function isTooDark(hexcolor) {
+							var r = parseInt(hexcolor.substr(1, 2), 16);
+							var g = parseInt(hexcolor.substr(3, 2), 16);
+							var b = parseInt(hexcolor.substr(4, 2), 16);
+							var yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+							// Return new color if to dark, else return the original
+							return (yiq < 180) ? true : false;
+						}
+						if (isTooDark(item_colour)) {
+							colour = "white";
+						}
+						else {
+							colour = "black";
+						}
+						return colour;
+					})
+				allRects.exit().remove();
+			};
+
+			const footer = document.getElementsByTagName("footer")[0];
+			const header = document.getElementsByTagName("header")[0];
+			const width = innerWidth;
+
+			const height = innerHeight - footer.clientHeight - header.clientHeight;
+
+			const flatArray = linkItems(filteredItems, sortedLinks);
+			if (flatArray != null) {
+				const root = flatArray.find(item => item.parentId == null);
+				root.x = 0;
+				root.y = 0;
+				root.depth = 0;
+				//setupRussianDoll(flatArray.sort((a, b) => (a.parentId == null)? -1 : a.parentId.localeCompare(b.parentId)), root, 0, 5);
+				//setupRussianDoll(flatArray, root, 0, 5);
+				setupDepths(flatArray, root, 0);
+				root.height = 1000;
+				root.width = width;
+				repositionElements(flatArray, root, 0, 10);
+
+				//const deepestObject = flatArray.sort((a, b) => b.depth - a.depth)[0];
+				//setupRussianDollMod(flatArray, root, 0);
+				flatArray.sort((a, b) => (a.depth - b.depth));
+				console.table(flatArray.map(item => {
+					return { id: item.id, parentId: item.parentId, name: item.name, x: item.x, y: item.y, width: item.width, height: item.height, };
+				}));
+				const infoDisplay = document.getElementById("info");
+				// infoDisplay.innerHTML = `${curatedLinksList.length} links of ${links.length} displayed.`;
+				d3.select("#nested-items-svg").remove();
+
+				const parentSVG = d3.select("#test-chart").append("svg")
+					.attr("version", "1.1")
+					.attr("baseProfile", "full")
+					.attr("xmlns", "http://www.w3.org/2000/svg")
+					.attr("id", "nested-items-svg")
+					.attr("viewBox", [0, 0, width, height])
+					.call(d3.zoom().on("zoom", () => {
+						const svg = d3.select("#test-drawingArea");
+						svg.attr("transform", d3.event.transform);
+					}))
+
+				const parentG = parentSVG
+					.append("g")
+					.attr("id", "test-drawingArea")
+					.attr("class", "test-drawing-area")
+				// .attr("transform", "translate("
+				// 	+ margin.left + "," + margin.top + ")");
+				update(parentG, flatArray);
+
+			}
+
+
+		});
+	}
+	setupEventHandlers();
+})();

@@ -158,4 +158,13 @@
 		opacity: 1;
 		transition: opacity 0s 0.2s linear 0.2s;
 	  }
-	
+
+	  .node {
+		fill: transparent;
+		stroke: steelblue;
+		stroke-width: 3px;
+		padding-top: 10px;
+		border-radius: 5px;
+	}
+	.embedded-items-container text {
+	}

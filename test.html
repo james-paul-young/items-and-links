@@ -6,6 +6,7 @@
 		stroke: steelblue;
 		stroke-width: 3px;
 		padding-top: 10px;
+		border-radius: 5px;
 	}
 
 	.node text {
@@ -105,6 +106,30 @@
 				fontWeight: "normal",
 			},
 			{
+				id: 10,
+				parentId: 7,
+				name: "TL-->L2A-->L3C-->L4A-->L5A",
+				visible: false,
+				fontSize: 10,
+				fontWeight: "normal",
+			},
+			{
+				id: 11,
+				parentId: 7,
+				name: "TL-->L2A-->L3C-->L4A-->L5B",
+				visible: false,
+				fontSize: 10,
+				fontWeight: "normal",
+			},
+			{
+				id: 12,
+				parentId: 7,
+				name: "TL-->L2A-->L3C-->L4A-->L5C",
+				visible: false,
+				fontSize: 10,
+				fontWeight: "normal",
+			},
+			{
 				id: 5,
 				parentId: 0,
 				name: "TL-->L2C",
@@ -132,31 +157,10 @@
 		]
 		// Set the dimensions and margins of the diagram
 		var margin = { top: 20, right: 90, bottom: 30, left: 90 },
-			width = 1024 - margin.left - margin.right,
-			height = 768 - margin.top - margin.bottom,
+			width = this.innerWidth - margin.left - margin.right,
+			height = this.innerHeight - margin.top - margin.bottom,
 			screenDepthMultiplier = 100;
 
-		// const setupRussianDoll = (elements, parentWidth, parentHeight) => {
-		// 	elements.forEach((sibling, index, array) => {
-		// 		const getDepth = (node) => {
-		// 			let depth = 0;
-		// 			const parent = elements.find(potentialParent => potentialParent.id == node.parent);
-		// 			if(parent != null) {
-		// 				depth = 1 + getDepth(parent);
-		// 			}
-		// 			return depth;
-		// 		}
-		// 		sibling.depth = getDepth(sibling) + 1;
-		// 		const siblings = elements.filter(potentialSibling => potentialSibling.parent == sibling.parent);
-		// 		const parent = elements.find(potentialParent => potentialParent.id == sibling.parent);
-		// 		sibling.parentRef = parent;
-		// 		sibling.height = parent ? (parent.height / siblings.length) : 1;
-		// 		sibling.width = parent ? (parent.width - 0.1) : 1;
-		// 		sibling.y = parent ? (parent.y + (siblings.findIndex(i => i.id == sibling.id) * sibling.height)) : 0;
-		// 		//sibling.x = parent ? (parent.x + (siblings.findIndex(i => i.id == sibling.id) * sibling.width)) : 0;
-		// 		sibling.x = 0;
-		// 	});
-		// }
 		const setupRussianDoll = (elements, parent, depth, margin) => {
 			const children = elements.filter(potentialChild => potentialChild.parentId == parent.id);
 			children.forEach((child, index, array) => {
@@ -175,25 +179,6 @@
 				child.depth = depth + 1;
 				setupRussianDoll(elements, child, child.depth, margin);
 			})
-			// elements.forEach((sibling, index, array) => {
-			// 	const getDepth = (node) => {
-			// 		let depth = 0;
-			// 		const parent = elements.find(potentialParent => potentialParent.id == node.parent);
-			// 		if (parent != null) {
-			// 			depth = 1 + getDepth(parent);
-			// 		}
-			// 		return depth;
-			// 	}
-			// 	sibling.depth = getDepth(sibling) + 1;
-			// 	const siblings = elements.filter(potentialSibling => potentialSibling.parent == sibling.parent);
-			// 	const parent = elements.find(potentialParent => potentialParent.id == sibling.parent);
-			// 	sibling.parentRef = parent;
-			// 	sibling.height = parentHeight / siblings.length - margin;
-			// 	sibling.width = parentWidth - margin;
-			// 	// sibling.y = parent ? (parent.y + (siblings.findIndex(i => i.id == sibling.id) * sibling.height)) : 0;
-			// 	// //sibling.x = parent ? (parent.x + (siblings.findIndex(i => i.id == sibling.id) * sibling.width)) : 0;
-			// 	// sibling.x = 0;
-			// });
 		}
 
 		//treeDataFlat.sort((a, b) => a.parent < b.parent ? -1 : 1)
@@ -238,11 +223,12 @@
 				});
 			gRects.append("text")
 				.text(d => d.name)
+				.style("font-size", d => d.fontSize)
 				.attr("x", function (d) {
 					d.xOffset = this.getBBox().width / 2;
 					return d.width / 2 - d.xOffset;
 				})
-				.attr("y", d => 15)
+				.attr("y", d => d.fontSize)
 
 			allRects.exit().remove();
 		};
