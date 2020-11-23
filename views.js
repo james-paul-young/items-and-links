@@ -3489,101 +3489,52 @@ const visualiseEmbeddedBoxes = (async () => {
 				}
 				return flatArray;
 			}
-			const setupRussianDoll = (elements, parent, depth, margin) => {
-				const children = elements.filter(potentialChild => potentialChild.parentId == parent.id);
-				children.forEach((child, index, array) => {
-					if (depth % 2 == 0) {
-						child.x = isNaN(parent.x + margin) ? 0 : parent.x + margin;
-						child.y = parent.y + parent.fontSize + (((parent.height - parent.fontSize) / array.length)) * index + margin;
-						child.width = parent.width - (margin * 2);
-						child.height = (parent.height - parent.fontSize) / array.length - (margin * 2);
-					}
-					else {
-						child.x = isNaN(parent.x + (parent.width / array.length) * index + margin) ? 0 : parent.x + (parent.width / array.length) * index + margin;
-						child.y = (parent.y + margin + parent.fontSize);
-						child.height = parent.height - parent.fontSize - (margin * 2);
-						child.width = parent.width / array.length - (margin * 2);
-					}
-					child.depth = depth + 1;
-					if (child.height < 0) {
-						if (child.identifier == "Education and Training Management") {
-							console.log(child);
-						}
-						child.height = 0;
-					}
-					if (child.width < 0) {
-						child.width = 0;
-					}
 
-					setupRussianDoll(elements, child, child.depth, margin);
-				})
-			}
-			const setupDepths = (elements, parent, depth) => {
-				const children = elements.filter(potentialChild => potentialChild.parentId == parent.id);
-				children.forEach((child, index, array) => {
-					child.depth = depth + 1;
-					if (depth % 2 == 0) {
-						child.y = index;
-						child.x = 0;
-					}
-					else {
-						child.x = index;
-						child.y = 0;
-					}
-					const grandchildCount = setupDepths(elements, child, child.depth);
-					if (grandchildCount == 0) {
-						child.width = 1;
-						child.height = 1;
-					}
-				});
-				if (children.length > 0) {
-					const widths = children.map(child => child.width);
-					parent.width = widths.reduce((accumulator, width) => accumulator + width);
-					const heights = children.map(child => child.height);
-					parent.height = heights.reduce((accumulator, width) => accumulator + width);
-				}
-				return children.length;
-			}
-			const repositionElements = (elements, parent, depth, margin) => {
+			const repositionElementsFitToRoot = (elements, parent, margin, topOffset) => {
 				const children = elements.filter(potentialChild => potentialChild.parentId == parent.id);
 				children.forEach((child, index, array) => {
 					if (parent != null) {
+						child.depth = parent.depth + 1;
 						if (child.depth % 2 == 0) {
-							child.width = Math.floor((parent.width - margin * (array.length + 1))/ array.length);
-							child.height = parent.height - 2 * margin;
-							child.y = parent.y + margin;
+							child.width = Math.floor((parent.width - margin * (array.length + 1)) / array.length);
+							child.height = parent.height - topOffset - 2 * margin;
+							child.y = parent.y + margin + topOffset;
 							child.x = margin + parent.x + (index * (child.width + margin));
 						}
 						else {
-							child.height = Math.floor((parent.height - margin * (array.length + 1))/ array.length);
+							child.height = Math.floor((parent.height - topOffset - margin * (array.length + 1)) / array.length);
 							child.width = parent.width - 2 * margin;
 							child.x = parent.x + margin;
-							child.y = margin + parent.y + (index * (child.height + margin));
+							child.y = margin + topOffset + parent.y + (index * (child.height + margin));
 						}
 					}
-					repositionElements(elements, child, depth, margin);
-				})
+					repositionElementsFitToRoot(elements, child, margin, topOffset);
+				});
+			}
 
-			}
-			const setupRussianDollMod = (elements, parent, depth, margin) => {
+			const repositionElementsFixedMinimum = (elements, parent, margin, topOffset) => {
+				
 				const children = elements.filter(potentialChild => potentialChild.parentId == parent.id);
-				//parent.width = (children.length == 0)? 1 : children.length + ;
 				children.forEach((child, index, array) => {
-					if (depth % 2 == 0) {
-						child.x = index;
-						// child.y = parent.y + parent.fontSize + (((parent.height - parent.fontSize) / array.length)) * index + margin;
-						// child.width = parent.width - (margin * 2);
-						// child.height = (parent.height - parent.fontSize) / array.length - (margin * 2);
+					if (parent != null) {
+						child.depth = parent.depth + 1;
+						if (child.depth % 2 == 0) {
+							child.width = Math.floor((parent.width - margin * (array.length + 1)) / array.length);
+							child.height = parent.height - topOffset - 2 * margin;
+							child.y = parent.y + margin + topOffset;
+							child.x = margin + parent.x + (index * (child.width + margin));
+						}
+						else {
+							child.height = Math.floor((parent.height - topOffset - margin * (array.length + 1)) / array.length);
+							child.width = parent.width - 2 * margin;
+							child.x = parent.x + margin;
+							child.y = margin + topOffset + parent.y + (index * (child.height + margin));
+						}
 					}
-					else {
-						// child.x = isNaN(parent.x + (parent.width / array.length) * index + margin) ? 0 : parent.x + (parent.width / array.length) * index + margin;
-						child.y = index;
-						// child.height = parent.height - parent.fontSize - (margin * 2);
-						// child.width = parent.width / array.length - (margin * 2);
-					}
-					setupRussianDollMod(elements, child, child.depth, margin);
-				})
+					repositionElements(elements, child, margin, topOffset);
+				});
 			}
+
 			const update = (parentG, items) => {
 				//console.table(sortedArray.map(item => { depthTwo: item.depth }));
 				const allRects = parentG.selectAll("g.embedded-items-container")
@@ -3623,11 +3574,14 @@ const visualiseEmbeddedBoxes = (async () => {
 				gRects.append("text")
 					.text(d => d.name)
 					.style("font-size", function (d) {
-						let fontsize = parseInt(window.getComputedStyle(this).getPropertyValue('font-size').replace("px", ""));
-						if (this.getBBox().width > d.width) {
-							fontsize = ((d.width) / this.getBBox().width) * 10 + "px";
+						d.fontSize = parseInt(window.getComputedStyle(this).getPropertyValue('font-size').replace("px", ""));
+						if (d.name == "ComSAS Support") {
+							console.log("X");
 						}
-						return fontsize;
+						if (this.getBBox().width > d.width - 5) {
+							d.fontSize = Math.floor((d.width / this.getBBox().width) * fontSize) + "px";
+						}
+						return d.fontSize;
 					})
 					.attr("x", function (d) {
 						d.xOffset = this.getBBox().width / 2;
@@ -3696,10 +3650,10 @@ const visualiseEmbeddedBoxes = (async () => {
 				root.depth = 0;
 				//setupRussianDoll(flatArray.sort((a, b) => (a.parentId == null)? -1 : a.parentId.localeCompare(b.parentId)), root, 0, 5);
 				//setupRussianDoll(flatArray, root, 0, 5);
-				setupDepths(flatArray, root, 0);
-				root.height = 1000;
-				root.width = width;
-				repositionElements(flatArray, root, 0, 10);
+				//setupDepths(flatArray, root, 0);
+				root.height = height * 2;
+				root.width = width * 2;
+				repositionElementsFitToRoot(flatArray, root, 15, parseInt(window.getComputedStyle(document.getElementById("visualise-embedded")).getPropertyValue('font-size').replace("px", "")) + 7);
 
 				//const deepestObject = flatArray.sort((a, b) => b.depth - a.depth)[0];
 				//setupRussianDollMod(flatArray, root, 0);
