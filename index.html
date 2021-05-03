@@ -4,258 +4,238 @@
 
 <head>
 	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
 
-	<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css">
-	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootswatch/4.3.1/sandstone/bootstrap.min.css">
-	<link rel="stylesheet" href="css/styles.css">
-	<script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
-	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+	<!-- CSS only -->
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css" rel="stylesheet"
+		integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6" crossorigin="anonymous">
+	<!-- JavaScript Bundle with Popper -->
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+		integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+		crossorigin="anonymous"></script>
+	<!-- <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootswatch/4.3.1/sandstone/bootstrap.min.css"> -->
+	<!-- <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script> -->
+	<!-- <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script> -->
 	<script src='http://d3js.org/d3.v5.min.js'></script>
 	<style>
-		th {
-			background: white;
-			position: sticky;
-			top: 0px;
-			/* Don't forget this, required for the stickiness */
-			box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.4);
+		html,
+		body {
+			height: 100%;
+			padding: 0;
+			margin: 0;
 		}
 
-		table {
-			text-align: left;
-			position: relative;
-			border-collapse: collapse;
+		.flex-master {
+			display: flex;
+			flex-direction: column;
+			flex-wrap: nowrap;
+
+			height: 100%;
+			overflow: auto;
+		}
+
+		.page-header {
+			flex: none;
+			/* fixed size */
+
+			padding: 15px;
+			font-size: 3em;
+			font-weight: bold;
+			background: #535353;
+			color: white;
+		}
+
+		.page-content {
+			flex: 1;
+			/* resize in container */
+			overflow: auto;
+			/* IMPORTANT for FireFox */
+
+			/* new flex container for content */
+			display: flex;
+			flex-direction: row;
+		}
+
+		.sidebar-left {
+			flex: none;
+			/* background: #838383; */
+
+			/* padding: 20px; */
+			width: 300px;
+			overflow: auto;
+			/* color: white; */
+		}
+
+		.sidebar-list {
+			width: 280px;
+		}
+
+		.splitter {
+			flex: none;
+			width: 4px;
+			cursor: col-resize;
+			background: #535353;
+		}
+
+		.content-container {
+			flex: 1 1 auto;
+			/* background: #eee; */
+			padding: 20px;
+			width: 100%;
+			overflow-y: auto;
+
+			display: flex;
+			/* new flex for content/ads*/
+			flex-direction: row;
+		}
+
+		.main-content {
+			flex: 1 1 auto;
+
+			width: 100%;
+			padding: 10px;
+		}
+
+		.page-ads {
+			flex: 0 0 auto;
+			width: 180px;
+			overflow: hidden;
+
+			display: flex;
+			/* new flex for ads */
+			flex-direction: column;
+		}
+
+		.ad {
+			flex: none;
+			align-self: center;
+			padding: 5px;
+			margin: 15px;
+			width: 150px;
+			height: 150px;
+			background: lightblue;
+			overflow: hidden;
+
+			/* center ad text */
+			display: flex;
+			justify-content: center;
+			align-items: center;
+		}
+
+		footer {
+			flex: 0 0 auto;
+			/* background: #535353;
+			color: white; */
+			padding: 10px;
+		}
+
+		.truncated-text {
+			white-space: nowrap;
+			width: 100%;
+			/* IE6 needs any width */
+			overflow: hidden;
+			/* "overflow" value must be different from  visible"*/
+			-o-text-overflow: ellipsis;
+			/* Opera < 11*/
+			text-overflow: ellipsis;
+			/* IE, Safari (WebKit), Opera >= 11, FF > 6 */
 		}
 	</style>
 	<title>Items and Links - Projects</title>
 </head>
 
 <body>
-	<header>
-		<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-			<!-- Nav tabs -->
-			<ul class="nav navbar-nav mr-auto" id="myTab" role="tablist">
-				<li class="nav-item">
-					<a class="nav-link active" id="projects-tab" data-toggle="tab" href="#projects" role="tab"
-						aria-controls="home" aria-selected="true">Home</a>
-				</li>
-				<li class="nav-item">
-					<a class="nav-link" id="items-tab" data-toggle="tab" href="#items" role="tab" aria-controls="items"
-						aria-selected="false">Items</a>
-				</li>
-				<li class="nav-item">
-					<a class="nav-link" id="item-types-tab" data-toggle="tab" href="#item-types" role="tab"
-						aria-controls="item-types" aria-selected="false">Item Types</a>
-				</li>
-				<li class="nav-item">
-					<a class="nav-link" id="link-types-tab" data-toggle="tab" href="#link-types" role="tab"
-						aria-controls="link-types" aria-selected="false">Link Types</a>
-				</li>
-				<li class="nav-item">
-					<a class="nav-link" id="links-tab" data-toggle="tab" href="#links" role="tab" aria-controls="links"
-						aria-selected="false">Links</a>
-				</li>
-				<li class="nav-item">
-					<a class="nav-link" id="filters-tab" data-toggle="tab" href="#filters" role="tab"
-						aria-controls="filters" aria-selected="false">Filters</a>
-				</li>
-				<li class="nav-item">
-					<a class="nav-link" id="visualise-tab" data-toggle="tab" href="#visualise" role="tab"
-						aria-controls="visualise" aria-selected="false">Visualise</a>
-				</li>
-				<li class="nav-item">
-					<a class="nav-link" id="visualise-embedded-tab" data-toggle="tab" href="#visualise-embedded" role="tab"
-						aria-controls="visualise-embedded" aria-selected="false">Visualise Embedded</a>
-				</li>
-			</ul>
-			<!-- <form class="form-inline"> -->
-			<div class="input-group" style="width: 250px;">
-				<input class="form-control" type="text" placeholder="Search&hellip;" id="searchInput">
-				<button id="search-clear" class="btn bg-transparent" style="margin-left: -40px; z-index: 100;">
-					<i class="fa fa-times"></i>
-				</button>
-			</div>
-			<!-- </form> -->
-		</nav>
-	</header>
-	<main>
-		<!-- Tab panes -->
-		<div class="tab-content">
-			<div class="tab-pane active fade-in items-page" id="projects" role="tabpanel" aria-labelledby="projects-tab">
-				<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3">
-					<h2>Projects</h2>
-					<div class="btn-toolbar mb-2 mb-md-0">
-						<div class="btn-group mr-2">
-							<button class="btn btn-sm btn-outline-secondary" id="createProjectButton">New
-								Project</button>
-							<button class="btn btn-sm btn-outline-secondary" id="createProjectFromFileButton">New
-								Project from file</button>
-							<button class="btn btn-sm btn-outline-secondary" id="exportProjectsButton">Export
-								list</button>
-						</div>
+	<div class="flex-master">
+		<header>
+			<nav class="navbar">
+				<ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+					<li class="nav-item" role="presentation">
+						<button class="nav-link active" id="pills-home-tab" data-bs-toggle="pill"
+							data-bs-target="#pills-home" type="button" role="tab" aria-controls="pills-home"
+							aria-selected="true">Home</button>
+					</li>
+					<li class="nav-item" role="presentation">
+						<button class="nav-link" id="pills-profile-tab" data-bs-toggle="pill"
+							data-bs-target="#pills-profile" type="button" role="tab" aria-controls="pills-profile"
+							aria-selected="false">Items</button>
+					</li>
+					<li class="nav-item" role="presentation">
+						<button class="nav-link" id="pills-contact-tab" data-bs-toggle="pill"
+							data-bs-target="#pills-contact" type="button" role="tab" aria-controls="pills-contact"
+							aria-selected="false">Contact</button>
+					</li>
+				</ul>
+			</nav>
+		</header>
+		<div class="page-content">
+			<nav class="sidebar-left">
+				<div class="d-flex flex-column align-items-stretch sidebar-list">
+					<a href="/"
+						class="d-flex align-items-center flex-shrink-0 p-3 link-dark text-decoration-none border-bottom justify-content-between">
+						<span class="fs-5 fw-semibold" id="list-group-name" id="list-group-name"></span>
+					</a>
+					<div class="list-group list-group-flush border-bottom scrollarea" id="sidebarList">
 					</div>
 				</div>
-				<div class="table-responsive">
-					<table id="projectsTable" class="table table-hover items-list">
-						<thead>
-							<tr class="red">
-								<th><a id="project-active-sort-order" href="#" title="Active order">Active</a></th>
-								<th><a id="project-identifier-sort-order" href="#" title="Sort order">Identifier</a>
-								</th>
-								<th><a id="project-description-sort-order" href="#" title="Sort order">Description</a>
-								</th>
-								<th><a id="project-updated-sort-order" href="#" title="Sort order">Updated</a></th>
-							</tr>
-						</thead>
-						<tbody></tbody>
-					</table>
-				</div>
+			</nav>
+			<div class="splitter">
 			</div>
-			<div class="tab-pane fade-in items-page" id="items" role="tabpanel" aria-labelledby="items-tab">
-				<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3">
-					<h2>Items (<label id="items-active-project"></label>)</h2>
-					<div class="btn-toolbar mb-2 mb-md-0">
-						<div class="btn-group mr-2">
-							<button class="btn btn-sm btn-outline-secondary" id="createItemButton"
-								title="Create a new item (F2) ">New Item</button>
-							<button class="btn btn-sm btn-outline-secondary" id="exportItemsButton">Export
-								list</button>
+			<div class="content-container">
+				<div class="tab-content w-100" id="pills-tabContent">
+					<div class="tab-pane fade show active" id="pills-home" role="tabpanel"
+						aria-labelledby="pills-home-tab">Project</div>
+					<div class="tab-pane fade" id="pills-profile" role="tabpanel" aria-labelledby="pills-profile-tab">
+						<div class="d-flex justify-content-end">
+							<div class="btn-group" role="group" aria-label="Basic outlined example">
+								<button type="button" class="btn btn-outline-primary" id="new-item">New</button>
+								<button type="button" class="btn btn-outline-primary">Delete</button>
+							</div>
+						</div>
+						<div class="fs-5 fw-semibold" id="list-group-name" id="list-group-name">Item Details</div>
+						<div class="mb-3">
+							<label for="itemIdentifierInput" class="form-label">Identifier</label>
+							<input type="text" class="form-control" id="itemIdentifierInput"
+								placeholder="Enter Identifier...">
+						</div>
+						<div class="mb-3">
+							<label for="itemDescriptionInput" class="form-label">Description</label>
+							<textarea class="form-control" id="itemDescriptionInput" rows="3"></textarea>
+						</div>
+						<div class="card mb-3">
+							<div class="card-body">
+								<h5 class="card-title">Colours</h5>
+								<label for="forecolorInput" class="form-label">Forecolour</label>
+								<input type="color" class="form-control form-control-color" id="forecolorInput"
+									title="Choose your color">
+								<label for="backcolorInput" class="form-label">Backcolor</label>
+								<input type="color" class="form-control form-control-color" id="backcolorInput"
+									title="Choose your color">
+							</div>
+						</div>
+						<div class="mb-3">
+							<label for="itemUpdatedInput" class="form-label">Last updated</label>
+							<input type="text" class="form-control" id="itemUpdatedInput" readonly="true">
+						</div>
+						<div class="mb-3">
+							<label for="itemCreatedInput" class="form-label">Created</label>
+							<input type="text" class="form-control" id="itemCreatedInput" readonly="true">
+						</div>
+						<div class="btn-group" role="group" aria-label="Items toolbar">
+							<button type="button" class="btn btn-primary" id="saveItem">Save</button>
 						</div>
 					</div>
+					<div class="tab-pane fade" id="pills-contact" role="tabpanel" aria-labelledby="pills-contact-tab">
+						...</div>
 				</div>
-				<table id="items-table" class="table table-hover items-list">
-					<thead>
-						<tr>
-							<th><a id="item-type-sort-order" href="#" title="Sort order">Type</a></th>
-							<th><a id="item-identifier-sort-order" href="#" title="Sort order">Identifier</a></th>
-							<th><a id="item-description-sort-order" href="#" title="Sort order">Description</a></th>
-							<th><a id="item-updated-sort-order" href="#" title="Sort order">Updated</a></th>
-						</tr>
-					</thead>
-					<tbody></tbody>
-				</table>
-			</div>
-			<div class="tab-pane fade-in items-page" id="item-types" role="tabpanel" aria-labelledby="item-types-tab">
-				<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3">
-					<h2>Item Types (<label id="item-types-active-project"></label>)</h2>
-					<div class="btn-toolbar mb-2 mb-md-0">
-						<div class="btn-group mr-2">
-							<button class="btn btn-sm btn-outline-secondary" id="create-item-type"
-								title="Create a new Item Type (F2) ">New Item Type</button>
-							<button class="btn btn-sm btn-outline-secondary" id="export-item-types">Export
-								list</button>
-						</div>
-					</div>
-				</div>
-				<table id="item-types-table" class="table table-hover items-list">
-					<thead>
-						<tr>
-							<th><a id="item-type-identifier-sort-order" href="#" title="Sort order">Identifier</a></th>
-							<th><a id="item-type-description-sort-order" href="#" title="Sort order">Description</a>
-							</th>
-							<th><a id="item-type-updated-sort-order" href="#" title="Sort order">Updated</a></th>
-						</tr>
-					</thead>
-					<tbody></tbody>
-				</table>
-			</div>
-			<div class="tab-pane fade-in items-page" id="links" role="tabpanel" aria-labelledby="links-tab">
-				<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3">
-					<h2>Links (<label id="links-active-project"></label>)</h2>
-					<div class="btn-toolbar mb-2 mb-md-0">
-						<div class="btn-group mr-2">
-							<button class="btn btn-sm btn-outline-secondary" id="create-link"
-								title="Create a new Link">New Link</button>
-							<button class="btn btn-sm btn-outline-secondary" id="export-links">Export
-								list</button>
-						</div>
-					</div>
-				</div>
-				<table id="links-table" class="table table-hover items-list">
-					<thead>
-						<tr>
-							<th><a id="link-identifier-sort-order" href="#" title="Sort order">Identifier</a></th>
-							<th><a id="link-description-sort-order" href="#" title="Sort order">Description</a></th>
-							<th><a id="link-source-sort-order" href="#" title="Sort order">Source</a></th>
-							<th><a id="link-type-sort-order" href="#" title="Sort order">Type</a></th>
-							<th><a id="link-target-sort-order" href="#" title="Sort order">Target</a></th>
-							<th><a id="link-updated-sort-order" href="#" title="Sort order">Updated</a></th>
-						</tr>
-					</thead>
-					<tbody></tbody>
-				</table>
-			</div>
-			<div class="tab-pane fade-in items-page" id="link-types" role="tabpanel" aria-labelledby="link-types-tab">
-				<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3">
-					<h2>Link Types (<label id="link-types-active-project"></label>)</h2>
-					<div class="btn-toolbar mb-2 mb-md-0">
-						<div class="btn-group mr-2">
-							<button class="btn btn-sm btn-outline-secondary" id="create-link-type"
-								title="Create a new Link Type">New Link Type</button>
-							<button class="btn btn-sm btn-outline-secondary" id="export-link-types">Export
-								list</button>
-						</div>
-					</div>
-				</div>
-				<table id="link-types-table" class="table table-hover items-list">
-					<thead>
-						<tr>
-							<th><a id="link-type-identifier-sort-order" href="#" title="Sort order">Identifier</a></th>
-							<th><a id="link-type-description-sort-order" href="#" title="Sort order">Description</a>
-							</th>
-							<th><a id="link-type-updated-sort-order" href="#" title="Sort order">Updated</a></th>
-						</tr>
-					</thead>
-					<tbody></tbody>
-				</table>
-			</div>
-			<div class="tab-pane fade-in items-page" id="filters" role="tabpanel" aria-labelledby="filters-tab">
-				<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-filters-center pt-3 pb-2 mb-3">
-					<h2>Filters (<label id="filters-active-project"></label>)</h2>
-					<div class="btn-toolbar mb-2 mb-md-0">
-						<div class="btn-group mr-2">
-							<button class="btn btn-sm btn-outline-secondary" id="createFilterButton"
-								title="Create a new filter">New Filter</button>
-							<button class="btn btn-sm btn-outline-secondary" id="exportFiltersButton">Export
-								list</button>
-						</div>
-					</div>
-				</div>
-				<table id="filters-table" class="table table-hover items-list">
-					<thead>
-						<tr>
-							<th><a id="filter-identifier-sort-order" href="#" title="Sort order">Identifier</a></th>
-							<th><a id="filter-description-sort-order" href="#" title="Sort order">Description</a></th>
-							<th><a id="filter-updated-sort-order" href="#" title="Sort order">Updated</a></th>
-						</tr>
-					</thead>
-					<tbody></tbody>
-				</table>
-			</div>
-			<div class="tab-pane fade-in" id="visualise" role="tabpanel" aria-labelledby="visualise-tab">
-				<div id="chart" style="position: relative;"></div>
-			</div>
-			<div class="tab-pane fade-in" id="visualise-embedded" role="tabpanel" aria-labelledby="visualise-embedded-tab">
-				<div id="test-chart" style="position: relative;"></div>
 			</div>
 		</div>
-		<div class="container" style="position: fixed; bottom: 120px;">
-			<div class="progress progress-hidden" id="progressBarContainer" style="height: 30px;">
-				<div class="progress-bar" role="progressbar" id="progressBar" style="color: blanchedalmond;"
-					aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
-			</div>
-		</div>
-
-	</main>
-	<footer class="text-center text-light bg-dark" style="position: fixed; bottom: 0px; width: 100%;">
-		<label for="predefinedfilters">Filter</label>
-		<select class="custom-select w-25" id="predefinedfilters" style="margin: 10px;">
-			<option></option>
-		</select>
-		<label id="info" class="col-form-label"></label>
-	</footer>
+		<footer>
+			<small>&copy West Wind Technologies, 2016</small>
+		</footer>
+	</div>
 	<script src="models.js"></script>
+	<script src="control.js"></script>
 	<script src="views.js"></script>
-	<script src="properties.js"></script>
 </body>
 
 </html>

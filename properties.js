@@ -964,6 +964,7 @@ const linkProperties = {
 				itemOption.innerHTML = itemOption.innerHTML + " (" + item.type.identifier + ")";
 			}
 			itemOption.value = item.internal_id;
+			itemOption.title = item.description;
 			sourceInput.appendChild(itemOption);
 			const targetItemOption = itemOption.cloneNode();
 			targetItemOption.innerHTML = item.identifier;
@@ -1261,7 +1262,9 @@ const linkTypeProperties = {
 					});
 					// Set the selection indicator for the current candidate line.
 					event.currentTarget.classList.toggle("connectorListSelectedItem");
-				});
+					connectorListItem.dataset.marker = markerItem.name;
+					connectorListItem.dataset.dash = dashItem.name;
+					});
 				// Create the container for the candidate line
 				const connectorListItemDiv = document.createElement("div");
 				// Give the container a random id to uniquely identify it among other containers. Used when adding SVG.
@@ -1353,8 +1356,12 @@ const linkTypeProperties = {
 
 		const allconnectorListItems = document.querySelectorAll("#connectorMarkerInput > .connectorListSelectedItem");
 		// Should only be one connector selected...
-		const marker = allconnectorListItems[0].dataset.marker;
-		const dash = allconnectorListItems[0].dataset.dash;
+		let marker = "";
+		let dash = "";
+		if(allconnectorListItems[0] != null) {
+			marker = allconnectorListItems[0].dataset.marker;
+			dash = allconnectorListItems[0].dataset.dash;
+		}
 		const saveLinkType = {
 			internal_id: linkinternal_id,
 			identifier: linkIdentifierInput.value,
