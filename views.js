@@ -4,9 +4,20 @@ class View {
 		this._controller = controller;
 		controller.loadItems();
 		this.setupItemsUserInterface();
+
+		const toastElList = [].slice.call(document.querySelectorAll('.toast'))
+		this.toastList = toastElList.map(function (toastEl) {
+			return new bootstrap.Toast(toastEl)
+		});
+		this.toastList.forEach(toast => toast.hide())
+
 	}
 	get controller() { return this._controller; }
 
+	async displayProgress(message, percent) {
+		document.getElementById("progress-message").innerHTML = message;
+		this.toastList[0].show();
+	}
 	async displayList(listGroupName, listId, listEntries, selectedCallback) {
 		document.getElementById("list-group-name").innerHTML = listGroupName;
 
@@ -74,6 +85,7 @@ class View {
 			this.displayBase(event.detail.newValue);
 			this.controller.loadItems();
 			this.controller.currentItem = event.detail.newValue;
+			this.displayProgress("Saved.");
 		});
 		document.addEventListener("items.loaded", async event => {
 			await this.displayList("Items", "sidebarList", event.detail.newValue, this.currentEntryChanged);
@@ -90,6 +102,7 @@ class View {
 			this.controller.newItem();
 		});
 		document.getElementById("saveItem").addEventListener("click", async event => {
+			this.displayProgress("Saving...");
 			const currentItem = this.controller.currentItem;
 			await this.saveBase(currentItem);
 			this.controller.saveCurrentItem();
