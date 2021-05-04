@@ -3,10 +3,15 @@
 class View {
 	constructor(controller) {
 		this.itemView = new ItemView(controller);
+		this.projectView = new ProjectView(controller);
 
 		document.getElementById("items-tab").addEventListener("click", event => {
 			this.itemView.display();
 		});
+		document.getElementById("projects-tab").addEventListener("click", event => {
+			this.projectView.display();
+		});
+		document.getElementById("projects-tab").click();
 	}
 }
 class BaseView {
@@ -53,13 +58,12 @@ class BaseView {
 	}
 	get HTML() {
 		return `
-			<div class="d-flex justify-content-end">
-				<div class="btn-group" role="group" aria-label="Basic outlined example">
-					<button type="button" class="btn btn-outline-primary" id="${this.UIElementIdPrefix}New">New</button>
-					<button type="button" class="btn btn-outline-primary" id="${this.UIElementIdPrefix}Delete">Delete</button>
-				</div>
+			<h2>${this.viewTitle}</h2>
+			<div class="d-flex bg-light p-2">
+					<button type="button" class="btn btn-outline-primary mx-1" id="${this.UIElementIdPrefix}New">New</button>
+					<button type="button" class="btn btn-outline-primary mx-1" id="${this.UIElementIdPrefix}Save">Save</button>
+					<button type="button" class="btn btn-outline-primary mx-1" id="${this.UIElementIdPrefix}Delete">Delete</button>
 			</div>
-			<div class="fs-5 fw-semibold">${this.viewTitle}</div>
 			<div class="mb-3">
 				<label for="${this.UIElementIdPrefix}IdentifierInput" class="form-label">Identifier</label>
 				<input type="text" class="form-control" id="${this.UIElementIdPrefix}IdentifierInput"
@@ -88,10 +92,7 @@ class BaseView {
 				<label for="${this.UIElementIdPrefix}CreatedInput" class="form-label">Created</label>
 				<input type="text" class="form-control" id="${this.UIElementIdPrefix}CreatedInput" readonly="true">
 			</div>
-			<div class="btn-group" role="group" aria-label="${this.UIElementIdPrefix} toolbar">
-				<button type="button" class="btn btn-primary" id="${this.UIElementIdPrefix}Save">Save</button>
-			</div>
-`;
+		`;
 	}
 	async save() { }
 	async new() { }
@@ -111,14 +112,11 @@ class BaseView {
 	}
 	async createSidebarEntry(listId, entry) {
 		const clickable = document.createElement("a");
-		const id = (entry.state == modelViewState.new) ? entry.tempId : entry.internal_id;
-		clickable.setAttribute("id", "sidebarEntry" + id);
+		clickable.setAttribute("id", "sidebarEntry" + entry.internal_id);
 		clickable.setAttribute("href", "#");
 		clickable.setAttribute("class", "list-group-item list-group-item-action py-3 lh-tight sidebar-list-entry");
 		clickable.setAttribute("aria-current", "false");
-		if (id != "") {
-			clickable.setAttribute("data-internalid", id);
-		}
+		clickable.setAttribute("data-internalid", entry.internal_id);
 		const getStateBadge = (state) => {
 			let badge = "";
 			switch (state) {
@@ -135,10 +133,10 @@ class BaseView {
 		}
 		clickable.innerHTML = `					
 			<div class="d-flex w-100 align-items-center justify-content-between">
-				<strong class="mb-1 truncated-text" id="sidebarEntryIdentifier${id}">${entry.identifier}</strong>
-				<h6 id="status${id}">${getStateBadge(entry.state)}</h6>
+				<strong class="mb-1 truncated-text" id="sidebarEntryIdentifier${entry.internal_id}">${entry.identifier}</strong>
+				<h6 id="status${entry.internal_id}">${getStateBadge(entry.state)}</h6>
 			</div>
-			<div class="mb-1 small truncated-text" id="sidebarEntryDescription${id}">${entry.description}</div>
+			<div class="mb-1 small truncated-text" id="sidebarEntryDescription${entry.internal_id}">${entry.description}</div>
 		`;
 		document.getElementById(listId).appendChild(clickable);
 		clickable.addEventListener("click", event => {
@@ -146,15 +144,15 @@ class BaseView {
 		});
 		entry.onIdentifierChanged.push(clickable);
 		clickable.addEventListener(this.UIElementIdPrefix + ".identifierChanged", event => {
-			document.getElementById(`sidebarEntryIdentifier${id}`).innerHTML = event.detail.newValue;
+			document.getElementById(`sidebarEntryIdentifier${event.detail.id}`).innerHTML = event.detail.newValue;
 		});
 		entry.onDescriptionChanged.push(clickable);
 		clickable.addEventListener(this.UIElementIdPrefix + ".descriptionChanged", event => {
-			document.getElementById(`sidebarEntryDescription${id}`).innerHTML = event.detail.newValue;
+			document.getElementById(`sidebarEntryDescription${event.detail.id}`).innerHTML = event.detail.newValue;
 		});
 		entry.onStateChanged.push(clickable);
 		clickable.addEventListener(this.UIElementIdPrefix + ".stateChanged", event => {
-			document.getElementById(`status${id}`).innerHTML = getStateBadge(event.detail.newValue);
+			document.getElementById(`status${event.detail.id}`).innerHTML = getStateBadge(event.detail.newValue);
 		});
 	}
 	async setActiveSidebarEntry(entry) {
@@ -163,10 +161,8 @@ class BaseView {
 			sidebarEntry.classList.remove("active");
 		});
 
-		const id = (entry.state == modelViewState.new) ? entry.tempId : entry.internal_id;
-
-		document.getElementById("sidebarEntry" + id).setAttribute("aria-current", "true");
-		document.getElementById("sidebarEntry" + id).classList.add("active");
+		document.getElementById("sidebarEntry" + entry.internal_id).setAttribute("aria-current", "true");
+		document.getElementById("sidebarEntry" + entry.internal_id).classList.add("active");
 	}
 	async currentEntryChanged(entry) {
 	}
@@ -208,15 +204,10 @@ class ItemView extends BaseView {
 		});
 		document.addEventListener("item.currentChanged", async event => {
 			this.displayBase(event.detail.newValue);
-			if (event.detail.newValue.state == modelViewState.new) {
-				await this.createSidebarEntry("sidebarList", event.detail.newValue);
-			}
 			this.setActiveSidebarEntry(event.detail.newValue);
 		});
-		document.addEventListener("item.saved", event => {
+		document.addEventListener("item.saved", async event => {
 			this.displayBase(event.detail.newValue);
-			// this.controller.loadItems();
-			// this.controller.currentItem = event.detail.newValue;
 			this.displayProgress("Saved.");
 		});
 		document.addEventListener("items.loaded", async event => {
@@ -235,6 +226,55 @@ class ItemView extends BaseView {
 	}
 	async new() {
 		this.controller.newItem();
+	}
+}
+
+class ProjectView extends BaseView {
+	constructor(controller) {
+		super(controller, "project-details", "project", "Project Details");
+		this._controller = controller;
+		this.initialise();
+	}
+	async display() {
+		await super.display();
+		this.displayProgress("Loading...");
+		this.controller.loadProjects();
+	}
+	async initialise() {
+		this.controller.onProjectsLoaded.push(document);
+		this.controller.onCurrentProjectChanged.push(document);
+		this.controller.onProjectSaved.push(document);
+		this.controller.onNewProject.push(document);
+
+		document.addEventListener("project.new", event => {
+			this.createSidebarEntry("sidebarList", event.detail.newValue);
+		});
+		document.addEventListener("project.currentChanged", async event => {
+			this.displayBase(event.detail.newValue);
+			this.setActiveSidebarEntry(event.detail.newValue);
+		});
+		document.addEventListener("project.saved", event => {
+			this.displayBase(event.detail.newValue);
+			// this.controller.loadProjects();
+			// this.controller.currentProject = event.detail.newValue;
+			this.displayProgress("Saved.");
+		});
+		document.addEventListener("projects.loaded", async event => {
+			await this.displayList("Projects", "sidebarList", event.detail.newValue);
+			if (event.detail.newValue.length > 0) {
+				this.controller.currentProject = event.detail.newValue[0];
+			}
+			this.displayProgress("Loaded " + event.detail.newValue.length + " projects.");
+		});
+	}
+	async save() {
+		this.displayProgress("Saving...");
+		const currentProject = this.controller.currentProject;
+		await this.saveBase(currentProject);
+		this.controller.saveCurrentProject();
+	}
+	async new() {
+		this.controller.newProject();
 	}
 }
 

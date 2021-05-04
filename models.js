@@ -107,11 +107,11 @@ class baseModel {
 						recordToSave.updated = recordToSave.created
 						// saveRequest = objectStore.add(recordToSave);
 					}
-					saveRequest = newRecord? objectStore.add(recordToSave) : objectStore.put(recordToSave);
+					saveRequest = objectStore.put(recordToSave);
 					saveRequest.onsuccess = (event) => {
 						console.log("Saved to " + this.storeName);
 						db.close();
-						resolve(true);
+						resolve(recordToSave);
 					}
 					saveRequest.onerror = (event) => {
 						console.log("Failed to save to " + this.storeName);
@@ -228,7 +228,7 @@ class baseModel {
 
 class projects extends baseModel {
 	constructor(dbName, dbVersion) {
-		super(dbName, dbVersion, "projects");
+		super(dbName, dbVersion, "project");
 	}
 	save(projectData) {
 		const populateRecordCallback = () => {
