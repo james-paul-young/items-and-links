@@ -16,7 +16,7 @@ class baseModel {
 	 * @param {integer} length The length of the ID to be generated.
 	 * @returns An alpha-only string containing an ID of the length requested.
 	 */
-	makeid(length) {
+	static makeid(length) {
 		console.assert(length && (length > 0), "No length provided for creating an ID");
 
 		let result = '';
@@ -102,7 +102,7 @@ class baseModel {
 					}
 					else {
 						// Saving a new record so lets initialise some values before writing to the object store
-						recordToSave.internal_id = this.makeid(50);
+						recordToSave.internal_id = baseModel.makeid(50);
 						recordToSave.created = datetime;
 						recordToSave.updated = recordToSave.created
 						// saveRequest = objectStore.add(recordToSave);

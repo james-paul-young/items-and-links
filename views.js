@@ -1,10 +1,20 @@
 "use strict";
+
 class View {
 	constructor(controller) {
-		this._controller = controller;
-		controller.loadItems();
-		this.setupItemsUserInterface();
+		this.itemView = new ItemView(controller);
 
+		document.getElementById("items-tab").addEventListener("click", event => {
+			this.itemView.display();
+		});
+	}
+}
+class BaseView {
+	constructor(controller, containerId, UIElementIdPrefix, viewTitle) {
+		this.containerId = containerId
+		this.UIElementIdPrefix = UIElementIdPrefix;
+		this.viewTitle = viewTitle
+		this._controller = controller;
 		const toastElList = [].slice.call(document.querySelectorAll('.toast'))
 		this.toastList = toastElList.map(function (toastEl) {
 			return new bootstrap.Toast(toastEl)
@@ -12,101 +22,219 @@ class View {
 		this.toastList.forEach(toast => toast.hide())
 
 	}
+	async display() {
+		document.getElementById(this.containerId).innerHTML = this.HTML;
+		document.getElementById(`${this.UIElementIdPrefix}Save`).addEventListener("click", async event => {
+			this.save();
+		});
+		document.getElementById(`${this.UIElementIdPrefix}New`).addEventListener("click", async event => {
+			this.new();
+		});
+		document.getElementById(`${this.UIElementIdPrefix}IdentifierInput`).addEventListener("keyup", event => {
+			this.controller.currentItem.identifier = event.currentTarget.value;
+		});
+		document.getElementById(`${this.UIElementIdPrefix}DescriptionInput`).addEventListener("keyup", event => {
+			this.controller.currentItem.description = event.currentTarget.value;
+		});
+		document.getElementById(`${this.UIElementIdPrefix}ForecolorInput`).addEventListener("change", event => {
+			this.controller.currentItem.forecolour = event.currentTarget.value;
+		});
+		document.getElementById(`${this.UIElementIdPrefix}BackcolorInput`).addEventListener("change", event => {
+			this.controller.currentItem.backcolour = event.currentTarget.value;
+		});
+	}
+	get containerId() { return this._containerId; }
+	set containerId(value) { this._containerId = value; }
+
+	get viewTitle() { return this._viewTitle; }
+
+	set viewTitle(value) {
+		this._viewTitle = value;
+	}
+	get HTML() {
+		return `
+			<div class="d-flex justify-content-end">
+				<div class="btn-group" role="group" aria-label="Basic outlined example">
+					<button type="button" class="btn btn-outline-primary" id="${this.UIElementIdPrefix}New">New</button>
+					<button type="button" class="btn btn-outline-primary" id="${this.UIElementIdPrefix}Delete">Delete</button>
+				</div>
+			</div>
+			<div class="fs-5 fw-semibold">${this.viewTitle}</div>
+			<div class="mb-3">
+				<label for="${this.UIElementIdPrefix}IdentifierInput" class="form-label">Identifier</label>
+				<input type="text" class="form-control" id="${this.UIElementIdPrefix}IdentifierInput"
+					placeholder="Enter Identifier...">
+			</div>
+			<div class="mb-3">
+				<label for="${this.UIElementIdPrefix}DescriptionInput" class="form-label">Description</label>
+				<textarea class="form-control" id="${this.UIElementIdPrefix}DescriptionInput" rows="3" placeholder="Enter Description..."></textarea>
+			</div>
+			<div class="card mb-3">
+				<div class="card-body">
+					<h5 class="card-title">Colours</h5>
+					<label for="${this.UIElementIdPrefix}ForecolorInput" class="form-label">Forecolour</label>
+					<input type="color" class="form-control form-control-color" id="${this.UIElementIdPrefix}ForecolorInput"
+						title="Choose your color">
+					<label for="${this.UIElementIdPrefix}BackcolorInput" class="form-label">Backcolor</label>
+					<input type="color" class="form-control form-control-color" id="${this.UIElementIdPrefix}BackcolorInput"
+						title="Choose your color">
+				</div>
+			</div>
+			<div class="mb-3">
+				<label for="${this.UIElementIdPrefix}UpdatedInput" class="form-label">Last updated</label>
+				<input type="text" class="form-control" id="${this.UIElementIdPrefix}UpdatedInput" readonly="true">
+			</div>
+			<div class="mb-3">
+				<label for="${this.UIElementIdPrefix}CreatedInput" class="form-label">Created</label>
+				<input type="text" class="form-control" id="${this.UIElementIdPrefix}CreatedInput" readonly="true">
+			</div>
+			<div class="btn-group" role="group" aria-label="${this.UIElementIdPrefix} toolbar">
+				<button type="button" class="btn btn-primary" id="${this.UIElementIdPrefix}Save">Save</button>
+			</div>
+`;
+	}
+	async save() { }
+	async new() { }
 	get controller() { return this._controller; }
 
 	async displayProgress(message, percent) {
 		document.getElementById("progress-message").innerHTML = message;
 		this.toastList[0].show();
 	}
-	async displayList(listGroupName, listId, listEntries, selectedCallback) {
+	async displayList(listGroupName, listId, listEntries) {
 		document.getElementById("list-group-name").innerHTML = listGroupName;
 
 		document.getElementById(listId).innerHTML = "";
 		listEntries.forEach(async listEntry => {
-			const sidebarListEntry = await this.createSidebarEntry(listEntry.internal_id, listEntry.identifier, listEntry.description);
-			document.getElementById(listId).appendChild(sidebarListEntry);
-			sidebarListEntry.addEventListener("click", event => {
-				this.controller.currentItem = this.controller.items.find(item => item.internal_id == event.currentTarget.dataset.internalid);
-			});
+			const sidebarListEntry = await this.createSidebarEntry(listId, listEntry);
 		});
 	}
-	async createSidebarEntry(internalId, initialIdentifier, initialDescription) {
+	async createSidebarEntry(listId, entry) {
 		const clickable = document.createElement("a");
-		clickable.setAttribute("id", "sidebarEntry" + internalId);
+		const id = (entry.state == modelViewState.new) ? entry.tempId : entry.internal_id;
+		clickable.setAttribute("id", "sidebarEntry" + id);
 		clickable.setAttribute("href", "#");
 		clickable.setAttribute("class", "list-group-item list-group-item-action py-3 lh-tight sidebar-list-entry");
 		clickable.setAttribute("aria-current", "false");
-		if (internalId || internalId != "") {
-			clickable.setAttribute("data-internalid", internalId);
+		if (id != "") {
+			clickable.setAttribute("data-internalid", id);
+		}
+		const getStateBadge = (state) => {
+			let badge = "";
+			switch (state) {
+				case modelViewState.new: {
+					badge = `<span class="badge bg-secondary">New</span>`;
+					break;
+				}
+				case modelViewState.unsaved: {
+					badge = `<span class="badge bg-warning">Unsaved</span>`;
+					break;
+				}
+			}
+			return badge;
 		}
 		clickable.innerHTML = `					
 			<div class="d-flex w-100 align-items-center justify-content-between">
-				<strong class="mb-1 truncated-text" id="sidebarEntryIdentifier${internalId}">${initialIdentifier}</strong>
+				<strong class="mb-1 truncated-text" id="sidebarEntryIdentifier${id}">${entry.identifier}</strong>
+				<h6 id="status${id}">${getStateBadge(entry.state)}</h6>
 			</div>
-			<div class="mb-1 small truncated-text" id="sidebarEntryDescription${internalId}">${initialDescription}</div>
+			<div class="mb-1 small truncated-text" id="sidebarEntryDescription${id}">${entry.description}</div>
 		`;
-		return clickable;
+		document.getElementById(listId).appendChild(clickable);
+		clickable.addEventListener("click", event => {
+			this.controller.currentItem = this.controller.items.find(item => item.internal_id == event.currentTarget.dataset.internalid);
+		});
+		entry.onIdentifierChanged.push(clickable);
+		clickable.addEventListener(this.UIElementIdPrefix + ".identifierChanged", event => {
+			document.getElementById(`sidebarEntryIdentifier${id}`).innerHTML = event.detail.newValue;
+		});
+		entry.onDescriptionChanged.push(clickable);
+		clickable.addEventListener(this.UIElementIdPrefix + ".descriptionChanged", event => {
+			document.getElementById(`sidebarEntryDescription${id}`).innerHTML = event.detail.newValue;
+		});
+		entry.onStateChanged.push(clickable);
+		clickable.addEventListener(this.UIElementIdPrefix + ".stateChanged", event => {
+			document.getElementById(`status${id}`).innerHTML = getStateBadge(event.detail.newValue);
+		});
 	}
 	async setActiveSidebarEntry(entry) {
 		document.querySelectorAll(".sidebar-list-entry").forEach(sidebarEntry => {
 			sidebarEntry.setAttribute("aria-current", "false");
 			sidebarEntry.classList.remove("active");
 		});
-		document.getElementById("sidebarEntry" + entry.internal_id).setAttribute("aria-current", "true");
-		document.getElementById("sidebarEntry" + entry.internal_id).classList.add("active");
+
+		const id = (entry.state == modelViewState.new) ? entry.tempId : entry.internal_id;
+
+		document.getElementById("sidebarEntry" + id).setAttribute("aria-current", "true");
+		document.getElementById("sidebarEntry" + id).classList.add("active");
 	}
 	async currentEntryChanged(entry) {
 	}
 	async displayBase(entry) {
-		document.getElementById("itemIdentifierInput").value = entry.identifier ? entry.identifier : "";
-		document.getElementById("itemDescriptionInput").value = entry.description ? entry.description : "";
-		document.getElementById("forecolorInput").value = entry.forecolour ? entry.forecolour : "#000000";
-		document.getElementById("backcolorInput").value = entry.backcolour ? entry.backcolour : "#000000";
-		document.getElementById("itemUpdatedInput").value = entry.updated ? entry.updated : "";
-		document.getElementById("itemCreatedInput").value = entry.created ? entry.created : "";
+		document.getElementById(`${this.UIElementIdPrefix}IdentifierInput`).value = entry.identifier ? entry.identifier : "";
+		document.getElementById(`${this.UIElementIdPrefix}DescriptionInput`).value = entry.description ? entry.description : "";
+		document.getElementById(`${this.UIElementIdPrefix}ForecolorInput`).value = entry.forecolour ? entry.forecolour : "#000000";
+		document.getElementById(`${this.UIElementIdPrefix}BackcolorInput`).value = entry.backcolour ? entry.backcolour : "#000000";
+		document.getElementById(`${this.UIElementIdPrefix}UpdatedInput`).value = entry.updated ? entry.updated : "";
+		document.getElementById(`${this.UIElementIdPrefix}CreatedInput`).value = entry.created ? entry.created : "";
 	}
 	async saveBase(entry) {
-		entry.identifier = document.getElementById("itemIdentifierInput").value;
-		entry.description = document.getElementById("itemDescriptionInput").value;
-		entry.forecolour = document.getElementById("forecolorInput").value;
-		entry.backcolour = document.getElementById("backcolorInput").value;
+		entry.identifier = document.getElementById(`${this.UIElementIdPrefix}IdentifierInput`).value;
+		entry.description = document.getElementById(`${this.UIElementIdPrefix}DescriptionInput`).value;
+		entry.forecolour = document.getElementById(`${this.UIElementIdPrefix}ForecolorInput`).value;
+		entry.backcolour = document.getElementById(`${this.UIElementIdPrefix}BackcolorInput`).value;
 	}
-	async setupItemsUserInterface() {
+}
+
+class ItemView extends BaseView {
+	constructor(controller) {
+		super(controller, "item-details", "item", "Item Details");
+		this._controller = controller;
+		this.initialise();
+	}
+	async display() {
+		await super.display();
+		this.displayProgress("Loading...");
+		this.controller.loadItems();
+	}
+	async initialise() {
 		this.controller.onItemsLoaded.push(document);
 		this.controller.onCurrentItemChanged.push(document);
 		this.controller.onItemSaved.push(document);
+		this.controller.onNewItem.push(document);
 
-		let itemsLoaded = false;
+		document.addEventListener("item.new", event => {
+			this.createSidebarEntry("sidebarList", event.detail.newValue);
+		});
 		document.addEventListener("item.currentChanged", async event => {
 			this.displayBase(event.detail.newValue);
+			if (event.detail.newValue.state == modelViewState.new) {
+				await this.createSidebarEntry("sidebarList", event.detail.newValue);
+			}
 			this.setActiveSidebarEntry(event.detail.newValue);
 		});
 		document.addEventListener("item.saved", event => {
 			this.displayBase(event.detail.newValue);
-			this.controller.loadItems();
-			this.controller.currentItem = event.detail.newValue;
+			// this.controller.loadItems();
+			// this.controller.currentItem = event.detail.newValue;
 			this.displayProgress("Saved.");
 		});
 		document.addEventListener("items.loaded", async event => {
-			await this.displayList("Items", "sidebarList", event.detail.newValue, this.currentEntryChanged);
+			await this.displayList("Items", "sidebarList", event.detail.newValue);
 			if (event.detail.newValue.length > 0) {
 				this.controller.currentItem = event.detail.newValue[0];
 			}
+			this.displayProgress("Loaded " + event.detail.newValue.length + " items.");
 		});
-		document.addEventListener("item.new", event => {
-			this.displayBase(event.detail.newValue);
-			this.createSidebarEntry(event.detail.newValue);
-		})
-
-		document.getElementById("new-item").addEventListener("click", async event => {
-			this.controller.newItem();
-		});
-		document.getElementById("saveItem").addEventListener("click", async event => {
-			this.displayProgress("Saving...");
-			const currentItem = this.controller.currentItem;
-			await this.saveBase(currentItem);
-			this.controller.saveCurrentItem();
-		});
+	}
+	async save() {
+		this.displayProgress("Saving...");
+		const currentItem = this.controller.currentItem;
+		await this.saveBase(currentItem);
+		this.controller.saveCurrentItem();
+	}
+	async new() {
+		this.controller.newItem();
 	}
 }
 

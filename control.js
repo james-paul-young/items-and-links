@@ -52,8 +52,12 @@ class Controller {
         }
     }
     newItem() {
-        this.currentItem = new Item(this.dbName, this.dbVersion);
-        this.onNewItem.forEach(listener => listener.dispatchEvent(new CustomEvent("item.new", { detail: { previousValue: null, newValue: this.currentItem, } })));
+        const newItemInstance = new Item(this.dbName, this.dbVersion);
+        newItemInstance.state = modelViewState.new;
+
+        this.items.push(newItemInstance);
+        this.onNewItem.forEach(listener => listener.dispatchEvent(new CustomEvent("item.new", { detail: { previousValue: null, newValue: newItemInstance, } })));
+        this.currentItem = newItemInstance;
     }
 
     async deleteItem() {
@@ -72,10 +76,11 @@ class Controller {
     }
     async saveCurrentItem() {
         // try {
-            const itemModel = new items(this._dbName, this._dbVersion)
+            const itemModel = new items(this._dbName, this._dbVersion);
             await itemModel.save(this.currentItem);
             // Let every listener know the current objective have been saved.
             this.onItemSaved.forEach(listener => listener.dispatchEvent(new CustomEvent("item.saved", { detail: { newValue: this.currentItem, } })));
+            this.currentItem.state = modelViewState.saved;
         // }
         // catch (exception) {
         //     alert(exception);
@@ -108,9 +113,10 @@ class Controller {
         })
     }
 }
+const modelViewState = Object.freeze({"new":"new", "unsaved":"unsaved", "saved":"saved", "unknown": "unknown"})
 
 class baseModelViewClass {
-    constructor({ eventNamePrefix = "", internal_id = "", identifier = "", description = "", forecolour = "", backcolour = "", created = "", updated = "" } = {}) {
+    constructor({ eventNamePrefix = "", internal_id = "", identifier = "", description = "", forecolour = "", backcolour = "", created = "", updated = "", state = "", } = {}) {
         this._data = { internal_id: internal_id, identifier: identifier, description: description, forecolour: forecolour, backcolour: backcolour, created: created, updated: updated };
         this._isDirty = false;
         this._onIdentifierChanged = [];
@@ -118,9 +124,22 @@ class baseModelViewClass {
         this._onActiveChanged = [];
         this._onForecolourChanged = [];
         this._onBackcolourChanged = [];
+        this._onStateChanged = [];
         this._eventNamePrefix = eventNamePrefix;
         this.className = ""
+        this.state = state;
+        this._tempId = "";
+
     }
+    get tempId() { 
+        if (this._tempId == "") {
+            this._tempId = baseModel.makeid(100);
+        }
+        return this._tempId;
+    }
+    get data() { return this._data; }
+
+    get onStateChanged() { return this._onStateChanged; }
     get onBackcolourChanged() { return this._onBackcolourChanged; }
     get onForecolourChanged() { return this._onForecolourChanged; }
     get onIdentifierChanged() { return this._onIdentifierChanged; }
@@ -129,11 +148,18 @@ class baseModelViewClass {
 
     get internal_id() { return this._data.internal_id; }
 
+    get state() { return this._state; }
+    set state(value) {
+        const previousValue = this._data.state;
+        this._data.state = value;
+        this.onStateChanged.forEach(listener => listener.dispatchEvent(new CustomEvent(this._eventNamePrefix + ".stateChanged", { detail: { id: this.internal_id, previousValue: previousValue, newValue: this.data.state, } })));
+    }
+
     get identifier() { return this._data.identifier; }
     set identifier(value) {
         const previousValue = this._data.identifier;
         this._data.identifier = value;
-        this._isDirty = true;
+        this.state = modelViewState.unsaved;
         this.onIdentifierChanged.forEach(listener => listener.dispatchEvent(new CustomEvent(this._eventNamePrefix + ".identifierChanged", { detail: { id: this.internal_id, previousValue: previousValue, newValue: this.data.identifier, } })));
     }
 
@@ -141,7 +167,7 @@ class baseModelViewClass {
     set description(value) {
         const previousValue = this._data.description;
         this._data.description = value;
-        this._isDirty = true;
+        this.state = modelViewState.unsaved;
         this.onDescriptionChanged.forEach(listener => listener.dispatchEvent(new CustomEvent(this._eventNamePrefix + ".descriptionChanged", { detail: { id: this.internal_id, previousValue: previousValue, newValue: this.data.description, } })));
     }
 
@@ -149,7 +175,7 @@ class baseModelViewClass {
     set forecolour(value) {
         const previousValue = this._data.forecolour;
         this._data.forecolour = value;
-        this._isDirty = true;
+        this.state = modelViewState.unsaved;
         this.onForecolourChanged.forEach(listener => listener.dispatchEvent(new CustomEvent(this._eventNamePrefix + ".forecolourChanged", { detail: { id: this.internal_id, previousValue: previousValue, newValue: this.data.forecolour, } })));
     }
 
@@ -157,7 +183,7 @@ class baseModelViewClass {
     set backcolour(value) {
         const previousValue = this._data.backcolour;
         this._data.backcolour = value;
-        this._isDirty = true;
+        this.state = modelViewState.unsaved;
         this.onBackcolourChanged.forEach(listener => listener.dispatchEvent(new CustomEvent(this._eventNamePrefix + ".backcolourChanged", { detail: { id: this.internal_id, previousValue: previousValue, newValue: this.data.backcolour, } })));
     }
 
@@ -196,8 +222,8 @@ class Project extends baseModelViewClass {
 }
 
 class Item extends baseModelViewClass {
-    constructor({ internal_id = "", identifier = "", description = "", forecolour = "", backcolour = "", created = "", updated = "", typeId = null } = {}) {
-        super({ eventNamePrefix: "item", internal_id: internal_id, identifier: identifier, description: description, forecolour: forecolour, backcolour: backcolour, created: created, updated: updated });
+    constructor({ internal_id = "", identifier = "", description = "", forecolour = "", backcolour = "", created = "", updated = "", typeId = null, state = modelViewState.unknown } = {}) {
+        super({ eventNamePrefix: "item", internal_id: internal_id, identifier: identifier, description: description, forecolour: forecolour, backcolour: backcolour, created: created, updated: updated, state: state });
 
         this.onTypeChanged = [];
         this.typeId = typeId;
@@ -209,7 +235,6 @@ class Item extends baseModelViewClass {
         this._isDirty = true;
         this.onTypeChanged.forEach(listener => listener.dispatchEvent(new CustomEvent(this._eventNamePrefix + ".TypeChanged", { detail: { id: this.internal_id, previousValue: previousValue, newValue: this._data.typeId, } })));
     }
-
     toJSON() {
         return `
                 {
