@@ -16,7 +16,8 @@
 	<!-- <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootswatch/4.3.1/sandstone/bootstrap.min.css"> -->
 	<!-- <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script> -->
 	<!-- <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script> -->
-	<script src='http://d3js.org/d3.v5.min.js'></script>
+	<!-- <script src='http://d3js.org/d3.v5.min.js'></script> -->
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css">
 	<style>
 		html,
 		body {
@@ -38,9 +39,9 @@
 			flex: none;
 			/* fixed size */
 
-			padding: 15px;
-			font-size: 3em;
-			font-weight: bold;
+			/* padding: 15px; */
+			/* font-size: 3em;
+			font-weight: bold; */
 			background: #535353;
 			color: white;
 		}
@@ -58,29 +59,25 @@
 
 		.sidebar-left {
 			flex: none;
-			/* background: #838383; */
+			background: black;
 
 			/* padding: 20px; */
-			width: 300px;
+			width: 400px;
 			overflow: auto;
-			/* color: white; */
+			color: white;
 		}
 
-		.sidebar-list {
-			width: 280px;
-		}
-
-		.splitter {
+		/* .splitter {
 			flex: none;
-			width: 4px;
+			width: 5px;
 			cursor: col-resize;
-			/* background: #535353; */
-		}
+			background: #535353;
+		} */
 
 		.content-container {
 			flex: 1 1 auto;
-			/* background: #eee; */
-			padding: 20px;
+			background: #838383;
+			/* padding: 20px; */
 			width: 100%;
 			overflow-y: auto;
 
@@ -124,83 +121,197 @@
 
 		footer {
 			flex: 0 0 auto;
-			/* background: #535353;
-			color: white; */
-			padding: 10px;
+			background: dodgerblue;
+			color: white;
+			padding-bottom: 3px;
 		}
 
-		.truncated-text {
-			white-space: nowrap;
-			width: 100%;
-			/* IE6 needs any width */
-			overflow: hidden;
-			/* "overflow" value must be different from  visible"*/
-			-o-text-overflow: ellipsis;
-			/* Opera < 11*/
-			text-overflow: ellipsis;
-			/* IE, Safari (WebKit), Opera >= 11, FF > 6 */
+		.nav-item-icon {
+			font-size: 16pt;
+		}
+
+		.hamburger {
+			font-size: 16pt;
+			/* padding: 15px; */
+			height: 50px;
+		}
+
+		.nav-collapsed {
+			width: 50px;
+			/* transition: width 0.5s; */
+		}
+
+		.nav-collapsed>button {
+			width: 50px;
+			height: 50px;
+			/* transition: width 0.5s; */
+		}
+
+		.nav-collapsed button>span {
+			visibility: hidden;
+		}
+
+		/* .nav-collapsed a {
+			height: 50px;
+		} */
+
+		.nav-expanded {
+			width: 280px;
+			/* transition: width 0.5s; */
+		}
+
+		.nav-expanded button {
+			width: 280px;
+			/* transition: width 0.5s; */
+		}
+
+		.nav-expanded button {
+			height: 50px;
+		}
+
+		.nav-expanded button:hover {
+			background: grey;
+		}
+
+		.nav-collapsed button:hover {
+			background: grey;
+		}
+
+		.nav-expanded a:hover {
+			background: grey;
+		}
+
+		.nav-collapsed a:hover {
+			background: grey;
+		}
+
+		.nav-expanded a {
+			height: 50px;
+		}
+
+		.nav-expanded button>span {
+			padding-left: 15px;
+			visibility: visible;
+			/* transition-delay: 0.5s; */
 		}
 	</style>
 	<title>Items and Links - Projects</title>
 </head>
 
-<body>
+<body class="bg-dark text-white">
 	<div class="flex-master">
-		<header class="align-middle">
-			<nav class="navbar bg-light border-bottom">
-				<ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
-					<li class="nav-item" role="presentation">
-						<button class="nav-link active" id="projects-tab" data-bs-toggle="pill"
-							data-bs-target="#projects" type="button" role="tab" aria-controls="projects"
-							aria-selected="true">Projects</button>
-					</li>
-					<li class="nav-item" role="presentation">
-						<button class="nav-link" id="items-tab" data-bs-toggle="pill"
-							data-bs-target="#items" type="button" role="tab" aria-controls="items"
-							aria-selected="false">Items</button>
-					</li>
-					<li class="nav-item" role="presentation">
-						<button class="nav-link" id="pills-contact-tab" data-bs-toggle="pill"
-							data-bs-target="#pills-contact" type="button" role="tab" aria-controls="pills-contact"
-							aria-selected="false">Contact</button>
-					</li>
-				</ul>
+
+
+		<header class="page-header" id="view-name">
+			<nav class="navbar navbar-expand-lg navbar-dark">
+				<div class="container-fluid">
+					<div class="collapse navbar-collapse " id="navbarSupportedContent">
+						<h4 class="navbar-nav me-auto mb-2 mb-lg-0">Items and Links</h4>
+						<!-- <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+							<li class="nav-item">
+								<a class="nav-link" aria-current="page" href="#"><i class="bi bi-plus-lg"></i></a>
+							</li>
+							<li class="nav-item">
+								<a class="nav-link" href="#"><i class="bi bi-arrow-clockwise nav-item-icon-lg"></i></a>
+							</li>
+						</ul> -->
+						<div class="d-flex">
+							<input class="form-control me-2" type="search" placeholder="Search" aria-label="Search" id="search">
+							<button class="btn btn-outline-light" type="submit">Search</button>
+						</div>
+					</div>
+				</div>
 			</nav>
 		</header>
+
 		<div class="page-content">
-			<nav class="sidebar-left">
-				<div class="d-flex flex-column align-items-stretch sidebar-list">
-					<a href="/"
-						class="d-flex align-items-center flex-shrink-0 p-3 link-dark text-decoration-none border-bottom justify-content-between">
-						<span class="fs-5 fw-semibold" id="list-group-name" id="list-group-name"></span>
-					</a>
-					<div class="list-group list-group-flush border-bottom scrollarea" id="sidebarList">
-					</div>
-				</div>
-			</nav>
-			<div class="splitter bg-light">
+			<div class="nav flex-column nav-pills me-3 text-white flex-shrink-0 nav-collapsed"
+				style="background: black;" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+				<button class="nav-link text-white d-flex align-items-center mb-3 mb-md-0 me-md-auto hamburger"
+					id="hamburger" type="button" title="Expand/collapse menu"><i class="bi bi-list"></i></button>
+				<button class="nav-link text-white active d-flex align-items-center mb-3 mb-md-0 me-md-auto"
+					id="component-tab" data-bs-toggle="pill" data-bs-target="#component" type="button" role="tab"
+					aria-controls="components" aria-selected="true" title="Components"><i
+						class="bi bi-puzzle nav-item-icon"></i><span>Components</span></button>
+				<button class="nav-link text-white d-flex align-items-center mb-3 mb-md-0 me-md-auto" id="item-tab"
+					data-bs-toggle="pill" data-bs-target="#item" type="button" role="tab" aria-controls="items"
+					aria-selected="false"><i class="bi bi-x-diamond nav-item-icon"
+						title="Items"></i><span>Items</span></button>
+				<button class="nav-link text-white d-flex align-items-center mb-3 mb-md-0 me-md-auto"
+					id="v-pills-messages-tab" data-bs-toggle="pill" data-bs-target="#v-pills-messages" type="button"
+					role="tab" aria-controls="v-pills-messages" aria-selected="false" title="Item Types"><i
+						class="bi bi-tag nav-item-icon"></i><span>Item Types</span></button>
+				<button class="nav-link text-white d-flex align-items-center mb-3 mb-md-0 me-md-auto"
+					id="v-pills-settings-tab" data-bs-toggle="pill" data-bs-target="#v-pills-settings" type="button"
+					role="tab" aria-controls="v-pills-settings" aria-selected="false" title="Links"><i
+						class="bi bi-link nav-item-icon"></i><span>Links</span></button>
 			</div>
-			<div class="content-container">
-				<div class="tab-content w-100" id="pills-tabContent">
-					<div class="tab-pane fade" id="projects" role="tabpanel" aria-labelledby="projects-tab">
-						<div id="project-details"></div>
+			<div class="tab-content w-100" id="v-pills-tabContent">
+				<div class="tab-pane fade show active" id="component" role="tabpanel" aria-labelledby="component-tab">
+					<div class="btn-toolbar m-3">
+						<div class="btn-group mr-2">
+							<button class="btn btn-sm btn-outline-secondary" id="new-component"><i class="bi bi-plus-lg me-2" ></i>New
+								Component</button>
+							<button class="btn btn-sm btn-outline-secondary" id="createComponentFromFileButton"><i class="bi bi-box-arrow-in-down me-2"></i>New
+								Component from file</button>
+						</div>
 					</div>
-					<div class="tab-pane fade" id="items" role="tabpanel" aria-labelledby="items-tab">
-						<div id="item-details"></div>
+					<table class="table table-hover table-dark">
+						<thead>
+							<tr>
+								<th><a id="component-active-sort-order" href="#" title="Sort order">Active</a>
+								</th>
+								<th><a id="component-identifier-sort-order" href="#" title="Sort order">Identifier</a>
+								</th>
+								<th><a id="component-description-sort-order" href="#" title="Sort order">Description</a>
+								</th>
+								<th><a id="component-updated-sort-order" href="#" title="Sort order">Updated</a></th>
+							</tr>
+						</thead>
+						<tbody id="component-table"></tbody>
+					</table>
+				</div>
+				<div class="tab-pane fade" id="item" role="tabpanel" aria-labelledby="item-tab">
+					<div class="btn-toolbar m-3">
+						<div class="btn-group mr-2">
+							<button class="btn btn-sm btn-outline-secondary" id="new-item"><i class="bi bi-plus-lg me-2"></i>New
+								Item</button>
+						</div>
 					</div>
-					<div class="tab-pane fade" id="pills-contact" role="tabpanel" aria-labelledby="pills-contact-tab">
-						...</div>
+					<table class="table table-hover table-dark">
+						<thead>
+							<tr>
+								<th><a id="item-image-sort-order" href="#" title="Sort order">Image</a>
+								</th>
+								<th><a id="item-active-sort-order" href="#" title="Sort order">Active</a>
+								</th>
+								<th><a id="item-identifier-sort-order" href="#" title="Sort order">Identifier</a>
+								</th>
+								<th><a id="item-description-sort-order" href="#" title="Sort order">Description</a>
+								</th>
+								<th><a id="item-updated-sort-order" href="#" title="Sort order">Updated</a></th>
+							</tr>
+						</thead>
+						<tbody id="item-table"></tbody>
+					</table>
 				</div>
-				<div class="toast position-absolute bottom-0 end-0 bg-secondary text-white" role="alert" aria-live="assertive" aria-atomic="true">
-					<div class="toast-body" id="progress-message">
-						
-					</div>
-				</div>
-				</div>
+				<div class="tab-pane fade" id="v-pills-messages" role="tabpanel" aria-labelledby="v-pills-messages-tab">
+					Item Types</div>
+				<div class="tab-pane fade" id="v-pills-settings" role="tabpanel" aria-labelledby="v-pills-settings-tab">
+					Links</div>
+			</div>
+			<div class="toast mb-5 me-4" role="alert" aria-live="assertive" aria-atomic="true"
+				style="background: black; position: absolute; right: 0px; bottom: 0px;">
+				<div class="toast-body text-white" id="progress-message"></div>
+			</div>
 		</div>
-		<footer>
-			<small>&copy West Wind Technologies, 2016</small>
+
+		<footer class="d-flex justify-content-between">
+			<small class="flex-column">Component:&nbsp;<span id="current-component">None</span></small>
+			<small class="flex-column"><span id="general-status"></span></small>			
+			<!-- <small>&copy West Wind Technologies, 2016</small> -->
 		</footer>
+
 	</div>
 
 	<script src="models.js"></script>

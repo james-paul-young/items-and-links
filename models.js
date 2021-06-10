@@ -27,13 +27,10 @@ class baseModel {
 		}
 		return result;
 	}
-	load(filter) {
+	load(project_id) {
 		console.assert(this.dbName, `No database name provided for loading from ${this.storeName}.`);
 		console.assert(this.dbVersion, `No database version provided for loading from ${this.storeName}.`);
 		return new Promise((resolve, reject) => {
-			if (!filter) {
-				filter = () => true;
-			}
 			// Get the currently active project.
 			const indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
 			console.log(`Opening ${this.dbName} v${this.dbVersion}`);
@@ -45,7 +42,14 @@ class baseModel {
 				const objectStore = loadTransaction.objectStore(this.storeName);
 
 				console.log("Loading from " + this.storeName + "...");
-				const loadRequest = objectStore.getAll();
+				let loadFrom = null;
+				try { 
+					loadFrom = objectStore.index("project_id");
+				}
+				catch(DOMException) {
+					loadFrom = objectStore;
+				}
+				const loadRequest = loadFrom.getAll(project_id);
 				loadRequest.onsuccess = (event) => {
 					console.log("Successful loading from " + this.storeName + ".");
 					db.close();
@@ -71,6 +75,7 @@ class baseModel {
 	}
 
 	save(populateRecordCallback) {
+		console.assert(populateRecordCallback, "No callback supplied for populating record to commit to db.");
 		return new Promise((resolve, reject) => {
 			const indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
 			const openDBRequest = indexedDB.open(this.dbName, this.dbVersion);
@@ -79,52 +84,35 @@ class baseModel {
 				const saveTransaction = db.transaction([this.storeName], "readwrite");
 				// Do something when all the data is added to the database.
 				saveTransaction.oncomplete = (event) => {
+					console.log(`Transaction "${this.storeName}" complete.`);
+					resolve(recordToSave);
+					db.close();
 				};
 				saveTransaction.onerror = (event) => {
 					console.error("error: " + event);
 				};
 				const objectStore = saveTransaction.objectStore(this.storeName);
-				let saveRequest = null;
-				let recordToSave = null;
-				if (populateRecordCallback) {
-					recordToSave = populateRecordCallback();
+				const recordToSave = populateRecordCallback();
+				console.assert(recordToSave, "No record to save to the db.");
+
+				console.log(`Saving ${JSON.stringify(recordToSave)} to "${this.storeName}"...`);
+				const datetime = new Date();
+
+				recordToSave.updated = recordToSave.created? datetime : null;
+				recordToSave.created = recordToSave.created? recordToSave.created : datetime;
+
+				const saveRequest = objectStore.put(recordToSave);
+				saveRequest.onsuccess = (event) => {
+					console.log("Saved to " + this.storeName);
 				}
-				if(recordToSave) {
-					console.log("Saving to " + this.storeName + "...");
-					let mergedRecord = null;
-					const datetime = new Date();
-					// Check if a new record is being written. Needed for 
-					// determining which operation to use later.
-					const newRecord = ((recordToSave.internal_id == null) || (recordToSave.internal_id.length == 0));
-					if (!newRecord) {
-						recordToSave.updated = datetime;
-						// saveRequest = objectStore.put(recordToSave);
-					}
-					else {
-						// Saving a new record so lets initialise some values before writing to the object store
-						recordToSave.internal_id = baseModel.makeid(50);
-						recordToSave.created = datetime;
-						recordToSave.updated = recordToSave.created
-						// saveRequest = objectStore.add(recordToSave);
-					}
-					saveRequest = objectStore.put(recordToSave);
-					saveRequest.onsuccess = (event) => {
-						console.log("Saved to " + this.storeName);
-						db.close();
-						resolve(recordToSave);
-					}
-					saveRequest.onerror = (event) => {
-						console.log("Failed to save to " + this.storeName);
-						db.close();
-						reject();
-					}
-					saveRequest.oncomplete = (event) => {
-						db.close();
-					}	
+				saveRequest.onerror = (event) => {
+					console.log("Failed to save to " + this.storeName);
+					db.close();
+					reject("Failed to save to " + this.storeName);
 				}
-				else {
-					reject("No record to save.");
-				}
+				saveRequest.oncomplete = (event) => {
+					db.close();
+				}	
 			};
 			openDBRequest.onerror = (event) => {
 				console.log(`Failed to open ${this.dbName} v${this.dbVersion}.`);
@@ -138,7 +126,7 @@ class baseModel {
 			const openDBRequest = indexedDB.open(dbName, dbVersion);
 			openDBRequest.onsuccess = (event) => {
 				const db = event.target.result;
-				const deleteTransaction = db.transaction([this.objectStore], "readwrite");
+				const deleteTransaction = db.transaction([this.storeName], "readwrite");
 				deleteTransaction.oncomplete = (event) => {
 					//					console.log("project deleted!");
 				};
@@ -146,7 +134,7 @@ class baseModel {
 					console.error("error: " + event);
 				};
 
-				const projectObjectStore = deleteTransaction.objectStore(this.objectStore);
+				const projectObjectStore = deleteTransaction.objectStore(this.storeName);
 				const deleteRequest = projectObjectStore.delete(id);
 				deleteRequest.onsuccess = (event) => {
 					db.close();
@@ -241,26 +229,13 @@ class projects extends baseModel {
 				updated: projectData.updated,
 			};
 		}
-		return super.save(populateRecordCallback(projectRecord));
-	}
-	get active() {
-		super.load().then(projects => {
-			return project.find(project => project.active);
-		});
-	}
-	set active(value) {
-		super.load().then(async projects => {
-			const currentActive = projects.find(project => project.active);
-			this.save({ ...currentActive, active: false, });
-			const result = await this.save({ ...value, active: true, });
-			return result;
-		});
+		return super.save(populateRecordCallback);
 	}
 }
 
 class items extends baseModel {
-	constructor(dbName, dbVersion) {
-		super(dbName, dbVersion, "item");
+	constructor(dbName, dbVersion, projectId) {
+		super(dbName, dbVersion, "item", projectId);
 	}
 	save(itemData) {
 		const populateRecordCallback = () => {
@@ -272,6 +247,7 @@ class items extends baseModel {
 				backcolour: itemData.backcolour,
 				created: itemData.created,
 				updated: itemData.updated,
+				project_id: itemData.project_id,
 			};
 		}
 		return super.save(populateRecordCallback);
