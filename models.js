@@ -33,15 +33,15 @@ class baseModel {
 		return new Promise((resolve, reject) => {
 			// Get the currently active project.
 			const indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
-			console.log(`Opening ${this.dbName} v${this.dbVersion}`);
+			// console.log(`Opening ${this.dbName} v${this.dbVersion}`);
 			const openDBRequest = indexedDB.open(this.dbName, this.dbVersion);
 			openDBRequest.onsuccess = (event) => {
 				const db = event.target.result;
-				console.log(`Creating transaction "${this.storeName}"`);
+				// console.log(`Creating transaction "${this.storeName}"`);
 				const loadTransaction = db.transaction([this.storeName], 'readonly');
 				const objectStore = loadTransaction.objectStore(this.storeName);
 
-				console.log("Loading from " + this.storeName + "...");
+				// console.log("Loading from " + this.storeName + "...");
 				let loadFrom = null;
 				try { 
 					loadFrom = objectStore.index("project_id");
@@ -51,12 +51,12 @@ class baseModel {
 				}
 				const loadRequest = loadFrom.getAll(project_id);
 				loadRequest.onsuccess = (event) => {
-					console.log("Successful loading from " + this.storeName + ".");
+					// console.log("Successful loading from " + this.storeName + ".");
 					db.close();
 					resolve(event.target.result);
 				};
 				loadRequest.onerror = (event) => {
-					console.log("Failed to load from " + this.storeName + ".");
+					// console.log("Failed to load from " + this.storeName + ".");
 					db.close();
 					reject();
 				}
@@ -65,7 +65,7 @@ class baseModel {
 				}
 			}
 			openDBRequest.onerror = (event) => {
-				console.log(`Failed to open ${this.dbName} v${this.dbVersion}.`);
+				// console.log(`Failed to open ${this.dbName} v${this.dbVersion}.`);
 				reject();
 			};
 			openDBRequest.onupgradeneeded = (event => {
@@ -84,7 +84,7 @@ class baseModel {
 				const saveTransaction = db.transaction([this.storeName], "readwrite");
 				// Do something when all the data is added to the database.
 				saveTransaction.oncomplete = (event) => {
-					console.log(`Transaction "${this.storeName}" complete.`);
+					// console.log(`Transaction "${this.storeName}" complete.`);
 					resolve(recordToSave);
 					db.close();
 				};
@@ -95,7 +95,7 @@ class baseModel {
 				const recordToSave = populateRecordCallback();
 				console.assert(recordToSave, "No record to save to the db.");
 
-				console.log(`Saving ${JSON.stringify(recordToSave)} to "${this.storeName}"...`);
+				// console.log(`Saving ${JSON.stringify(recordToSave)} to "${this.storeName}"...`);
 				const datetime = new Date();
 
 				recordToSave.updated = recordToSave.created? datetime : null;
@@ -103,10 +103,10 @@ class baseModel {
 
 				const saveRequest = objectStore.put(recordToSave);
 				saveRequest.onsuccess = (event) => {
-					console.log("Saved to " + this.storeName);
+					// console.log("Saved to " + this.storeName);
 				}
 				saveRequest.onerror = (event) => {
-					console.log("Failed to save to " + this.storeName);
+					// console.log("Failed to save to " + this.storeName);
 					db.close();
 					reject("Failed to save to " + this.storeName);
 				}
@@ -115,7 +115,7 @@ class baseModel {
 				}	
 			};
 			openDBRequest.onerror = (event) => {
-				console.log(`Failed to open ${this.dbName} v${this.dbVersion}.`);
+				// console.log(`Failed to open ${this.dbName} v${this.dbVersion}.`);
 				reject();
 			};
 		});
@@ -128,7 +128,7 @@ class baseModel {
 				const db = event.target.result;
 				const deleteTransaction = db.transaction([this.storeName], "readwrite");
 				deleteTransaction.oncomplete = (event) => {
-					//					console.log("project deleted!");
+					//					// console.log("project deleted!");
 				};
 				deleteTransaction.onerror = (event) => {
 					console.error("error: " + event);
@@ -142,48 +142,46 @@ class baseModel {
 				}
 				deleteRequest.onerror = (event) => {
 					db.close();
-					//console.log("not deleted.");
+					//// console.log("not deleted.");
 				}
 				deleteRequest.oncomplete = (event) => {
 					db.close();
 				}
 			}
 			openDBRequest.onerror = (event) => {
-				console.log(`Failed to open ${this.dbName} v${this.dbVersion}.`);
+				// console.log(`Failed to open ${this.dbName} v${this.dbVersion}.`);
 				reject();
 			}
 		});
 	}
-	clear() {
+	deleteAll(project_id) {
 		return new Promise((resolve, reject) => {
 			const indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
 			const openDBRequest = indexedDB.open(dbName, dbVersion);
 			openDBRequest.onsuccess = (event) => {
 				const db = event.target.result;
-				const deleteTransaction = db.transaction([this.objectStore], "readwrite");
+				const deleteTransaction = db.transaction([this.storeName], "readwrite");
 				deleteTransaction.oncomplete = (event) => {
-					//					console.log("project deleted!");
+					db.close();
 				};
 				deleteTransaction.onerror = (event) => {
+					db.close();
 					console.error("error: " + event);
 				};
-
-				const projectObjectStore = deleteTransaction.objectStore(this.objectStore);
-				const deleteRequest = projectObjectStore.clear();
-				deleteRequest.onsuccess = (event) => {
+				const objectStore = deleteTransaction.objectStore(this.storeName);
+				const deleteCursorRequest = objectStore.index("project_id").openKeyCursor(IDBKeyRange.only(project_id));
+				deleteCursorRequest.onsuccess = event => {
+					const cursor = event.result;
+					while(cursor) {
+						objectStore.delete(cursor.primaryKey);
+						cursor.continue();
+					}
 					db.close();
 					resolve();
 				}
-				deleteRequest.onerror = (event) => {
-					db.close();
-					//console.log("not deleted.");
-				}
-				deleteRequest.oncomplete = (event) => {
-					db.close();
-				}
 			}
 			openDBRequest.onerror = (event) => {
-				console.log(`Failed to open ${this.dbName} v${this.dbVersion}.`);
+				// console.log(`Failed to open ${this.dbName} v${this.dbVersion}.`);
 				reject();
 			}
 		});
@@ -208,10 +206,8 @@ class baseModel {
 
 			const filterObjectStore = db.createObjectStore("filter", { keyPath: "internal_id" });
 			filterObjectStore.createIndex("project_id", "project_id", { unique: false, })
-
 		}
 	}
-
 }
 
 class projects extends baseModel {
@@ -243,11 +239,12 @@ class items extends baseModel {
 				internal_id: itemData.internal_id,
 				identifier: itemData.identifier,
 				description: itemData.description,
-				forcolour: itemData.forcolour,
+				forecolour: itemData.forecolour,
 				backcolour: itemData.backcolour,
 				created: itemData.created,
 				updated: itemData.updated,
 				project_id: itemData.project_id,
+				type_id: itemData.type_id,
 			};
 		}
 		return super.save(populateRecordCallback);
@@ -265,9 +262,8 @@ class itemTypes extends baseModel {
 				identifier: itemTypeData.identifier,
 				description: itemTypeData.description,
 				project_id: itemTypeData.project_id,
-				colour: itemTypeData.colour,
-				background_colour: itemTypeData.fill_colour,
-				fill_colour: itemTypeData.fill_colour,
+				backcolour: itemTypeData.backcolour,
+				forecolour: itemTypeData.forecolour,
 				created: itemTypeData.created,
 				updated: itemTypeData.updated,
 			};
@@ -285,10 +281,10 @@ class links extends baseModel {
 				internal_id: linkData.internal_id,
 				identifier: linkData.identifier,
 				description: linkData.description,
-				linkTypeId: linkData.linkTypeId,
+				linkType_id: linkData.linkType_id,
 				project_id: linkData.project_id,
-				source: linkData.sourceId,
-				target: linkData.targetId,
+				source_id: linkData.source_id,
+				target_id: linkData.target_id,
 				created: linkData.created,
 				updated: linkData.updated,
 			};
@@ -309,9 +305,11 @@ class linkTypes extends baseModel {
 				project_id: linkTypeData.project_id,
 				marker: linkTypeData.marker,
 				dash: linkTypeData.dash,
-				colour: linkTypeData.colour,
+				backcolour: linkTypeData.backcolour,
+				forecolour: linkTypeData.forecolour,
 				created: linkTypeData.created,
 				updated: linkTypeData.updated,
+				linkedType_id: linkTypeData.linkedType_id,
 			};
 		}
 		return super.save(populateRecordCallback);

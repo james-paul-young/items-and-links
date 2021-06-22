@@ -16,7 +16,7 @@
 	<!-- <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootswatch/4.3.1/sandstone/bootstrap.min.css"> -->
 	<!-- <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script> -->
 	<!-- <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script> -->
-	<!-- <script src='http://d3js.org/d3.v5.min.js'></script> -->
+	<script src="https://d3js.org/d3.v5.min.js"></script>
 	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css">
 	<style>
 		html,
@@ -194,6 +194,145 @@
 			visibility: visible;
 			/* transition-delay: 0.5s; */
 		}
+
+		.circular-icon-list {
+			height: 30px;
+			width: 30px;
+			stroke-width: 3px;
+			stroke-dasharray: 1600;
+			stroke-miterlimit: 10;
+			stroke-dashoffset: 1600;
+			animation: dash 14s linear 1;
+		}
+
+		.item-types-short-list {
+			list-style-type: none;
+			height: 200px;
+			width: 100%;
+			overflow: hidden;
+			overflow-y: scroll;
+		}
+
+		.item-types-short-list li {
+			margin-left: -20px;
+			text-decoration: none;
+			height: 30px;
+
+		}
+
+		.item-type-selected {
+			background-color: #aaa;
+		}
+
+		.default-link-type-visual {
+			stroke-width: 3px;
+		}
+
+		.link-type-list-colour {
+			height: 30px;
+			width: 100px;
+		}
+
+		.link-types-short-list {
+			list-style-type: none;
+			height: 200px;
+			width: 100%;
+			overflow: hidden;
+			overflow-y: scroll;
+		}
+
+		.link-types-short-list li {
+			margin-left: -20px;
+			text-decoration: none;
+			height: 30px;
+
+		}
+
+		.link-type-selected {
+			background-color: #aaa;
+		}
+
+		.link-types-list {
+			list-style-type: none;
+			height: 420px;
+			width: 100%;
+			overflow: hidden;
+			overflow-y: scroll;
+		}
+
+		.item-list-colour {
+			height: 30px;
+			width: 30px;
+		}
+
+		@keyframes dash {
+			from {
+				stroke-dashoffset: 1600;
+			}
+
+			to {
+				stroke-dashoffset: -1600;
+			}
+		}
+
+		.link-types-list li {
+			margin-left: -20px;
+			text-decoration: none;
+			height: 30px;
+		}
+
+		.items-short-list {
+			list-style-type: none;
+			height: 200px;
+			width: 100%;
+			overflow: hidden;
+			overflow-y: scroll;
+		}
+
+		.items-short-list li {
+			margin-left: -20px;
+			text-decoration: none;
+			height: 30px;
+
+		}
+
+		.long-list {
+			list-style-type: none;
+			height: 420px;
+			width: 100%;
+			overflow: hidden;
+			overflow-y: scroll;
+		}
+
+		.short-list {
+			list-style-type: none;
+			height: 200px;
+			width: 100%;
+			overflow: hidden;
+			overflow-y: scroll;
+		}
+
+		.list-item-visual-short {
+			height: 30px;
+			width: 30px;
+		}
+
+		.list-item-selected {
+			background-color: #aaa;
+		}
+
+		.short-list li {
+			margin-left: -20px;
+			text-decoration: none;
+			height: 30px;
+
+		}
+
+		.ripple {
+			fill: none;
+			stroke: white;
+		}
+
 	</style>
 	<title>Items and Links - Projects</title>
 </head>
@@ -216,7 +355,8 @@
 							</li>
 						</ul> -->
 						<div class="d-flex">
-							<input class="form-control me-2" type="search" placeholder="Search" aria-label="Search" id="search">
+							<input class="form-control me-2" type="search" placeholder="Search" aria-label="Search"
+								id="search">
 							<button class="btn btn-outline-light" type="submit">Search</button>
 						</div>
 					</div>
@@ -230,60 +370,70 @@
 				<button class="nav-link text-white d-flex align-items-center mb-3 mb-md-0 me-md-auto hamburger"
 					id="hamburger" type="button" title="Expand/collapse menu"><i class="bi bi-list"></i></button>
 				<button class="nav-link text-white active d-flex align-items-center mb-3 mb-md-0 me-md-auto"
-					id="component-tab" data-bs-toggle="pill" data-bs-target="#component" type="button" role="tab"
-					aria-controls="components" aria-selected="true" title="Components"><i
-						class="bi bi-puzzle nav-item-icon"></i><span>Components</span></button>
+					id="project-tab" data-bs-toggle="pill" data-bs-target="#project" type="button" role="tab"
+					aria-controls="projects" aria-selected="true" title="Projects"><i
+						class="bi bi-puzzle nav-item-icon"></i><span>Projects</span></button>
 				<button class="nav-link text-white d-flex align-items-center mb-3 mb-md-0 me-md-auto" id="item-tab"
 					data-bs-toggle="pill" data-bs-target="#item" type="button" role="tab" aria-controls="items"
 					aria-selected="false"><i class="bi bi-x-diamond nav-item-icon"
 						title="Items"></i><span>Items</span></button>
-				<button class="nav-link text-white d-flex align-items-center mb-3 mb-md-0 me-md-auto"
-					id="v-pills-messages-tab" data-bs-toggle="pill" data-bs-target="#v-pills-messages" type="button"
-					role="tab" aria-controls="v-pills-messages" aria-selected="false" title="Item Types"><i
-						class="bi bi-tag nav-item-icon"></i><span>Item Types</span></button>
-				<button class="nav-link text-white d-flex align-items-center mb-3 mb-md-0 me-md-auto"
-					id="v-pills-settings-tab" data-bs-toggle="pill" data-bs-target="#v-pills-settings" type="button"
-					role="tab" aria-controls="v-pills-settings" aria-selected="false" title="Links"><i
+				<button class="nav-link text-white d-flex align-items-center mb-3 mb-md-0 me-md-auto" id="item-type-tab"
+					data-bs-toggle="pill" data-bs-target="#item-type" type="button" role="tab" aria-controls="item-type"
+					aria-selected="false" title="Item Types"><i class="bi bi-tag nav-item-icon"></i><span>Item
+						Types</span></button>
+				<button class="nav-link text-white d-flex align-items-center mb-3 mb-md-0 me-md-auto" id="link-tab"
+					data-bs-toggle="pill" data-bs-target="#link" type="button" role="tab" aria-controls="link"
+					aria-selected="false" title="Links"><i
 						class="bi bi-link nav-item-icon"></i><span>Links</span></button>
+				<button class="nav-link text-white d-flex align-items-center mb-3 mb-md-0 me-md-auto" id="link-type-tab"
+					data-bs-toggle="pill" data-bs-target="#link-type" type="button" role="tab" aria-controls="link-type"
+					aria-selected="false" title="Link Types" style="position: relative;"><i class="bi bi-tag-fill"
+						style="position: absolute; top: 19px; left: 25px;"></i><i class="bi bi-link nav-item-icon"
+						style="position: absolute; top: 3px;"></i><span>Link Types</span></button>
+				<button class="nav-link text-white d-flex align-items-center mb-3 mb-md-0 me-md-auto" id="visualise-tab"
+					data-bs-toggle="pill" data-bs-target="#visualise" type="button" role="tab" aria-controls="visualise"
+					aria-selected="false" title="Visualise"><i style="margin-left: -4px;"
+						class="fs-3 bi bi-diagram-2"></i><span>Visualise</span></button>
 			</div>
 			<div class="tab-content w-100" id="v-pills-tabContent">
-				<div class="tab-pane fade show active" id="component" role="tabpanel" aria-labelledby="component-tab">
+				<div class="tab-pane fade show active" id="project" role="tabpanel" aria-labelledby="project-tab">
 					<div class="btn-toolbar m-3">
 						<div class="btn-group mr-2">
-							<button class="btn btn-sm btn-outline-secondary" id="new-component"><i class="bi bi-plus-lg me-2" ></i>New
-								Component</button>
-							<button class="btn btn-sm btn-outline-secondary" id="createComponentFromFileButton"><i class="bi bi-box-arrow-in-down me-2"></i>New
-								Component from file</button>
+							<button class="btn btn-sm btn-outline-secondary" id="new-project"><i
+									class="bi bi-plus-lg me-2"></i>New
+								Project</button>
+							<button class="btn btn-sm btn-outline-secondary" id="createProjectFromFileButton"><i
+									class="bi bi-box-arrow-in-down me-2"></i>New
+								Project from file</button>
 						</div>
 					</div>
 					<table class="table table-hover table-dark">
 						<thead>
 							<tr>
-								<th><a id="component-active-sort-order" href="#" title="Sort order">Active</a>
+								<th><a id="project-active-sort-order" href="#" title="Sort order">Active</a>
 								</th>
-								<th><a id="component-identifier-sort-order" href="#" title="Sort order">Identifier</a>
+								<th><a id="project-identifier-sort-order" href="#" title="Sort order">Identifier</a>
 								</th>
-								<th><a id="component-description-sort-order" href="#" title="Sort order">Description</a>
+								<th><a id="project-description-sort-order" href="#" title="Sort order">Description</a>
 								</th>
-								<th><a id="component-updated-sort-order" href="#" title="Sort order">Updated</a></th>
+								<th><a id="project-updated-sort-order" href="#" title="Sort order">Updated</a></th>
 							</tr>
 						</thead>
-						<tbody id="component-table"></tbody>
+						<tbody id="project-table"></tbody>
 					</table>
 				</div>
 				<div class="tab-pane fade" id="item" role="tabpanel" aria-labelledby="item-tab">
 					<div class="btn-toolbar m-3">
 						<div class="btn-group mr-2">
-							<button class="btn btn-sm btn-outline-secondary" id="new-item"><i class="bi bi-plus-lg me-2"></i>New
+							<button class="btn btn-sm btn-outline-secondary" id="new-item"><i
+									class="bi bi-plus-lg me-2"></i>New
 								Item</button>
 						</div>
 					</div>
 					<table class="table table-hover table-dark">
 						<thead>
 							<tr>
-								<th><a id="item-image-sort-order" href="#" title="Sort order">Image</a>
-								</th>
-								<th><a id="item-active-sort-order" href="#" title="Sort order">Active</a>
+								<th><a id="item-image-sort-order" href="#" title="Sort order">Visual</a>
 								</th>
 								<th><a id="item-identifier-sort-order" href="#" title="Sort order">Identifier</a>
 								</th>
@@ -295,10 +445,100 @@
 						<tbody id="item-table"></tbody>
 					</table>
 				</div>
-				<div class="tab-pane fade" id="v-pills-messages" role="tabpanel" aria-labelledby="v-pills-messages-tab">
-					Item Types</div>
-				<div class="tab-pane fade" id="v-pills-settings" role="tabpanel" aria-labelledby="v-pills-settings-tab">
-					Links</div>
+				<div class="tab-pane fade" id="item-type" role="tabpanel" aria-labelledby="item-type-tab">
+					<div class="btn-toolbar m-3">
+						<div class="btn-group mr-2">
+							<button class="btn btn-sm btn-outline-secondary" id="new-item-type"><i
+									class="bi bi-plus-lg me-2"></i>New
+								Item Type</button>
+						</div>
+					</div>
+					<table class="table table-hover table-dark">
+						<thead>
+							<tr>
+								<th><a id="item-type-image-sort-order" href="#" title="Sort order">Visual</a>
+								</th>
+								<th><a id="item-type-identifier-sort-order" href="#" title="Sort order">Identifier</a>
+								</th>
+								<th><a id="item-type-description-sort-order" href="#" title="Sort order">Description</a>
+								</th>
+								<th><a id="item-type-updated-sort-order" href="#" title="Sort order">Updated</a></th>
+							</tr>
+						</thead>
+						<tbody id="item-type-table"></tbody>
+					</table>
+				</div>
+				<div class="tab-pane fade" id="link" role="tabpanel" aria-labelledby="link-tab">
+					<div class="btn-toolbar m-3">
+						<div class="btn-group mr-2">
+							<button class="btn btn-sm btn-outline-secondary" id="new-link"><i
+									class="bi bi-plus-lg me-2"></i>New
+								Link</button>
+						</div>
+					</div>
+					<table class="table table-hover table-dark">
+						<thead>
+							<tr>
+								<th><a id="link-source-sort-order" href="#" title="Sort order">Source</a>
+								</th>
+								<th><a id="link-type-sort-order" href="#" title="Sort order">Type</a>
+								</th>
+								<th><a id="link-target-sort-order" href="#" title="Sort order">Target</a>
+								</th>
+								<th><a id="link-updated-sort-order" href="#" title="Sort order">Updated</a></th>
+							</tr>
+						</thead>
+						<tbody id="link-table"></tbody>
+					</table>
+				</div>
+				<div class="tab-pane fade" id="link-type" role="tabpanel" aria-labelledby="link-type-tab">
+					<div class="btn-toolbar m-3">
+						<div class="btn-group mr-2">
+							<button class="btn btn-sm btn-outline-secondary" id="new-link-type"><i
+									class="bi bi-plus-lg me-2"></i>New
+								Link Type</button>
+						</div>
+					</div>
+					<table class="table table-hover table-dark">
+						<thead>
+							<tr>
+								<th><a id="link-type-image-sort-order" href="#" title="Sort order">Visual</a>
+								</th>
+								<th><a id="link-type-identifier-sort-order" href="#" title="Sort order">Identifier</a>
+								</th>
+								<th><a id="link-type-description-sort-order" href="#" title="Sort order">Description</a>
+								</th>
+								<th><a id="link-type-updated-sort-order" href="#" title="Sort order">Updated</a></th>
+							</tr>
+						</thead>
+						<tbody id="link-type-table"></tbody>
+					</table>
+				</div>
+				<div class="tab-pane fade" id="visualise" role="tabpanel" aria-labelledby="visualise-tab">
+					<!-- <div class="btn-toolbar m-3">
+						<div class="btn-group mr-2">
+							<button class="btn btn-sm btn-outline-secondary" id="new-link-type"><i
+									class="bi bi-plus-lg me-2"></i>New
+								Link Type</button>
+						</div>
+					</div> -->
+					<div id="chart" style="position: relative;" class="w-100">
+						<!-- <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" 
+						viewBox="10 10 24 24">
+						 <defs>
+							 <linearGradient id="linear-gradient" x1="-100%" y1="0" x2="200%" y2="0" >
+								 <stop offset="0" stop-color="black">
+									<animate attributeName="offset" values="0;0.2;0.5" dur="0.5s" repeatCount="indefinite"  /> 
+								 </stop>
+								 <stop offset="0.5" stop-color="white">
+									 <animate attributeName="offset" values="0.5;0.7;0.8;1" dur="0.5s" repeatCount="indefinite"  /> 
+								 </stop>
+							 </linearGradient>
+						 </defs>
+					 <path fill="url(#linear-gradient)" d="M20,31 C15.4189994,27.2225585 12.5023327,24.2225585 11.25,22 C10.2743515,20.6156479 10,19.6181623 10,18.1428571 C10,15.5113854 12.4883456,13 15,13 C17.3176009,13 18.9621484,13.8491346 20,15.5714286 C21.0382977,13.8491346 22.6828452,13 25,13 C27.5116544,13 30,15.5113854 30,18.1428571 C30,19.6181623 29.7256485,20.6156479 28.75,22 C27.497816,24.2225585 24.5811493,27.2225585 20,31 Z" />
+					 </svg> -->
+					</div>
+				</div>
 			</div>
 			<div class="toast mb-5 me-4" role="alert" aria-live="assertive" aria-atomic="true"
 				style="background: black; position: absolute; right: 0px; bottom: 0px;">
@@ -307,8 +547,8 @@
 		</div>
 
 		<footer class="d-flex justify-content-between">
-			<small class="flex-column">Component:&nbsp;<span id="current-component">None</span></small>
-			<small class="flex-column"><span id="general-status"></span></small>			
+			<small class="flex-column">Project:&nbsp;<span id="current-project">None</span></small>
+			<small class="flex-column"><span id="general-status"></span></small>
 			<!-- <small>&copy West Wind Technologies, 2016</small> -->
 		</footer>
 
